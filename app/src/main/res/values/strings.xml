@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Carmon</string>
+    <string name="notification_title">Carmon service</string>
+</resources>
