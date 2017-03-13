@@ -6,7 +6,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -24,10 +23,6 @@ public abstract class BotCommands {
     public BotManager getManager() {
         return manager;
     }
-    /*
-    public ControlService getService(){
-        return manager.getService();
-    }*/
 
     protected JSONObject processCommand(String command, String... args){
         JSONObject response = null;

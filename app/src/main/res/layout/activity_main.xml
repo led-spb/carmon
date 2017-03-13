@@ -9,94 +9,84 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="ru.led.carmon.MainActivity">
 
-    <TextView
+    <Button
+        style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Bot token"
-        android:id="@+id/textViewBotToken"
+        android:text="Start"
+        android:id="@+id/btnStart"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        android:layout_alignParentLeft="true" />
 
-    <EditText
+    <Button
+        style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/editTextBotToken"
-        android:layout_below="@+id/textViewBotToken"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        android:text="Stop"
+        android:id="@+id/btnStop"
+        android:layout_alignParentTop="true"
+        android:layout_toLeftOf="@+id/btnConfig" />
 
-    <TextView
+    <Button
+        style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Admin user id"
-        android:id="@+id/textViewBotAdmin"
-        android:layout_below="@+id/editTextBotToken"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        android:text="Locate"
+        android:id="@+id/btnLocate"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/btnStart"
+        android:layout_toLeftOf="@+id/btnStop" />
 
-    <EditText
+    <Button
+        style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/editTextBotAdmin"
-        android:layout_below="@+id/textViewBotAdmin"
-        android:layout_alignParentLeft="true"
+        android:text="Config"
+        android:id="@+id/btnConfig"
+        android:layout_alignParentTop="true"
         android:layout_alignParentRight="true" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Wake interval, minutes"
-        android:id="@+id/textViewWakeInterval"
-        android:layout_below="@+id/editTextBotAdmin"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/btnStart"
+        android:layout_alignParentLeft="true">
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editTextWakeInterval"
-        android:layout_below="@+id/textViewWakeInterval"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:id="@+id/stateStatus" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:id="@+id/stateConnection" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:id="@+id/stateQueue" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:id="@+id/stateBattery" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:id="@+id/stateLocation" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Timeout, minutes"
-        android:id="@+id/textViewIdleTimeout"
-        android:layout_below="@+id/editTextWakeInterval"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
-
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editTextIdleTimeout"
-        android:layout_below="@+id/textViewIdleTimeout"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Locate times"
-        android:id="@+id/textViewLocateTimes"
-        android:layout_below="@+id/editTextIdleTimeout"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
-
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editTextLocateTimes"
-        android:layout_below="@+id/textViewLocateTimes"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <ru.yandex.yandexmapkit.MapView
+            android:id="@+id/map"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:apiKey="1234567890"
+            android:tag="static"
+            android:layout_weight="1"
+            />
+    </LinearLayout>
 
 </RelativeLayout>

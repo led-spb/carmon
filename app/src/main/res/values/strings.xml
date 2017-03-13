@@ -1,4 +1,16 @@
 <resources>
     <string name="app_name">Carmon</string>
     <string name="notification_title">Carmon service</string>
+
+    <string name="mqtt_url">MQTT broker URL</string>
+
+    <string name="mqtt_username">Username</string>
+    <string name="mqtt_password">Password</string>
+    <string name="mqtt_clientid">Client ID</string>
+    <string name="mqtt_keepalive">Keepalive</string>
+
+    <string name="wake_interval">Wake interval, minutes</string>
+    <string name="idle_timeout">Idle timeout, minutes</string>
+    <string name="locate_times">Locate times</string>
+    <string name="btnSave">Save</string>
 </resources>

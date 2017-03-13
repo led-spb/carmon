@@ -3,7 +3,6 @@ package ru.led.carmon;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.text.DateFormat;
@@ -11,17 +10,21 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Observable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Created by Alexey.Ponimash on 24.10.2016.
- */
-public class CarState {
-    private static final DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+
+public class CarState extends Observable {
+    public static final DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
     private Location location;
 
+    private boolean MqttConnected = false;
+    private int queueLength = 0;
+    private String status = "stopped";
+
     private boolean gpsEnabled;
+    private boolean timeSync;
     private int satellites;
     private int satellitesUsed;
     private int timeToFirstFix;
@@ -29,7 +32,6 @@ public class CarState {
     private boolean hasLocation;
     private boolean hasBattery;
 
-    //private long locateInterval;
     private long wakeInterval;
     private long idleTimeout;
     private long gpsTimeout;
@@ -44,7 +46,7 @@ public class CarState {
 
     private ArrayList<Calendar> locateTimes = new ArrayList<Calendar>();
 
-    public CarState(SharedPreferences preferences) {
+    public CarState( SharedPreferences preferences ) {
         this.preferences = preferences;
 
         setLocateTimes(
@@ -59,12 +61,13 @@ public class CarState {
         setGpsTimeout(
                 preferences.getLong("gps_timeout", 5 * 60 * 1000)
         );
+        setTimeSync(
+                preferences.getBoolean("tyme_sync", false)
+        );
     }
 
     private static Pattern locateTimesPattern = Pattern.compile("[^\\d]*(\\d{2}):(\\d{2})[^\\s]*");
     private static SimpleDateFormat localTimesFormat = new SimpleDateFormat("HH:mm");
-
-
     public void setLocateTimes(String inputString){
         Matcher m = locateTimesPattern.matcher(inputString);
 
@@ -152,6 +155,7 @@ public class CarState {
         this.satellitesUsed = satellitesUsed;
     }
 
+    /*
     public String statusString() {
         StringBuilder builder = new StringBuilder();
 
@@ -203,7 +207,7 @@ public class CarState {
                 String.format("Coord: %.5f %.5f", getLocation().getLatitude(), getLocation().getLongitude())
         );
         return builder.toString();
-    }
+    }*/
 
     public void beginUpdate(boolean useLoc) {
         if( useLoc ) {
@@ -309,6 +313,8 @@ public class CarState {
         if ( (location.getProvider().equals(LocationManager.GPS_PROVIDER)  || !gpsEnabled) && location.getAccuracy() < minDistance ) {
             Log.i(getClass().getPackage().getName(), "hasLocation");
             this.hasLocation = true;
+            setChanged();
+            notifyObservers();
         }
     }
 
@@ -326,6 +332,8 @@ public class CarState {
             batteryNotified = false;
         }
         this.hasBattery = true;
+        setChanged();
+        notifyObservers();
     }
 
     public boolean isBatteryWarning() {
@@ -348,4 +356,74 @@ public class CarState {
         this.batteryPlugged = batteryPlugged;
     }
 
+    public boolean isTimeSync() {
+        return timeSync;
+    }
+
+    public void setTimeSync(boolean timeSync) {
+        this.timeSync = timeSync;
+        this.preferences.edit().putBoolean("time_sync", timeSync).apply();
+    }
+
+    public String getMqttUrl() {
+        return preferences.getString("mqttUrl","");
+    }
+
+    public void setMqttUrl(String mqttUrl) {
+        this.preferences.edit().putString("mqttUrl", mqttUrl).apply();
+    }
+
+    public String getMqttUsername() {
+        return preferences.getString("mqttUsername","");
+    }
+
+    public void setMqttUsername(String mqttUsername) {
+        this.preferences.edit().putString("mqttUsername", mqttUsername).apply();
+    }
+
+    public String getMqttPassword() {
+        return preferences.getString("mqttPassword", "");
+    }
+
+    public void setMqttPassword(String mqttPassword) {
+        this.preferences.edit().putString("mqttPassword", mqttPassword).apply();
+    }
+
+    public String getMqttClientId() {
+        return preferences.getString("mqttClientId", "");
+    }
+
+    public void setMqttClientId(String mqttClientId) {
+        this.preferences.edit().putString("mqttClientId", mqttClientId).apply();
+    }
+
+    public boolean isMqttConnected() {
+        return MqttConnected;
+    }
+
+    public void setMqttConnected(boolean mqttConnected) {
+        MqttConnected = mqttConnected;
+        setChanged();
+        notifyObservers();
+    }
+
+    public int getQueueLength() {
+        return queueLength;
+    }
+
+    public void setQueueLength(int queueLength) {
+        this.queueLength = queueLength;
+        setChanged();
+        notifyObservers();
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+        setChanged();
+        notifyObservers();
+    }
 }

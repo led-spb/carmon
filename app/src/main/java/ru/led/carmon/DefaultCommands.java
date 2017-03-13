@@ -26,7 +26,6 @@ public class DefaultCommands extends BotCommands {
                 new Intent(ControlService.LOCATE_ACTION)
                         .putExtra("info", false)
                         .putExtra("location", (Integer) 2)
-                        .putExtra("request_id", getManager().getCurrentMessageId())
         );
         return null;
     }
@@ -35,7 +34,6 @@ public class DefaultCommands extends BotCommands {
                 new Intent(ControlService.LOCATE_ACTION)
                         .putExtra("info", false)
                         .putExtra("location", (Integer) 1)
-                        .putExtra("request_id", getManager().getCurrentMessageId())
         );
         return null;
     }
@@ -45,8 +43,6 @@ public class DefaultCommands extends BotCommands {
                 new Intent(ControlService.WAKE_ACTION)
                         .putExtra("info", true)
                         .putExtra("location", (Integer) 0)
-                        .putExtra("request_id", getManager().getCurrentMessageId())
-
         );
         return null;
     }
@@ -59,15 +55,12 @@ public class DefaultCommands extends BotCommands {
 
         getService().sendBroadcast(
                 new Intent(ControlService.TIMESYNC_ACTION)
-                        .putExtra("request_id", getManager().getCurrentMessageId())
                         .putExtra("force", force)
-
         );
         return null;
     }
 
     public JSONObject execExec(final String... args) throws JSONException {
-        final int requestId = getManager().getCurrentMessageId();
 
         new Thread(new Runnable() {
             @Override
@@ -91,10 +84,10 @@ public class DefaultCommands extends BotCommands {
                     }
 
                     process.waitFor();
-                    getManager().sendMessage(requestId, output.toString() );
+                    getManager().sendEvent( output.toString() );
                 } catch (Exception e) {
                     e.printStackTrace();
-                    getManager().sendMessage(requestId, e.toString() );
+                    getManager().sendEvent( e.toString() );
                 }
             }
         }).start();
