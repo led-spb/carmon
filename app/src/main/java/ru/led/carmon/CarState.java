@@ -3,13 +3,15 @@ package ru.led.carmon;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
-import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Observable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,24 +19,19 @@ import java.util.regex.Pattern;
 
 public class CarState extends Observable {
     public static final DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-    private Location location;
+    private Location location, lastLocation;
+    private JSONArray track;
 
     private boolean MqttConnected = false;
     private int queueLength = 0;
     private String status = "stopped";
 
     private boolean gpsEnabled;
-    private boolean timeSync;
     private int satellites;
     private int satellitesUsed;
     private int timeToFirstFix;
 
-    private boolean hasLocation;
-    private boolean hasBattery;
-
-    private long wakeInterval;
-    private long idleTimeout;
-    private long gpsTimeout;
+    private boolean fineLocation;
 
     private int batteryLevel;
     private int batteryTemperature;
@@ -48,26 +45,15 @@ public class CarState extends Observable {
 
     public CarState( SharedPreferences preferences ) {
         this.preferences = preferences;
-
+        startNewTrack();
         setLocateTimes(
                 preferences.getString("locate_times", "07:00 23:00")
-        );
-        setWakeInterval(
-                preferences.getLong("wake_interval", 1 * 60 * 60 * 1000)
-        );
-        setIdleTimeout(
-                preferences.getLong("idle_timeout", 2 * 60 * 1000)
-        );
-        setGpsTimeout(
-                preferences.getLong("gps_timeout", 5 * 60 * 1000)
-        );
-        setTimeSync(
-                preferences.getBoolean("tyme_sync", false)
         );
     }
 
     private static Pattern locateTimesPattern = Pattern.compile("[^\\d]*(\\d{2}):(\\d{2})[^\\s]*");
     private static SimpleDateFormat localTimesFormat = new SimpleDateFormat("HH:mm");
+
     public void setLocateTimes(String inputString){
         Matcher m = locateTimesPattern.matcher(inputString);
 
@@ -109,7 +95,6 @@ public class CarState extends Observable {
 
     public Calendar getNextLocateTime(){
         Calendar now = Calendar.getInstance(), minDate = null;
-
         for (Calendar c: getLocateTimes() ){
             while( c.before(now) ){
                 c.add( Calendar.DAY_OF_MONTH, 1);
@@ -121,22 +106,26 @@ public class CarState extends Observable {
         return minDate;
     }
 
-    private static String interval2String(long interval) {
-        interval = interval / 1000 / 60;
-        if( interval==0 ){
-            return "off";
+    private Calendar wakeTimestamp;
+    public Calendar getNextWakeTime(){
+        if( wakeTimestamp == null){
+            return null;
         }
-        StringBuilder res = new StringBuilder();
-        if( interval >= 60 ){
-            res.append( String.format("%d h", interval /60) );
-         }
-        if( interval % 60 > 0 ) {
-            if( interval >= 60 ) {
-                res.append(" ");
-            }
-            res.append(String.format("%d m", interval % 60) );
+
+        Calendar now = Calendar.getInstance();
+        int interval = (int)getWakeInterval();
+        while( wakeTimestamp.before(now) ){
+            wakeTimestamp.add(Calendar.MILLISECOND, interval);
         }
-        return res.toString();
+        return wakeTimestamp;
+    }
+
+    public void setFirstWake(long offset){
+        wakeTimestamp = Calendar.getInstance();
+        wakeTimestamp.setTimeInMillis( offset );
+
+        setChanged();
+        notifyObservers();
     }
 
     public int getSatellites() {
@@ -155,72 +144,6 @@ public class CarState extends Observable {
         this.satellitesUsed = satellitesUsed;
     }
 
-    /*
-    public String statusString() {
-        StringBuilder builder = new StringBuilder();
-
-        builder.append(
-                String.format("Car status %s", dateFormat.format(new Date()))
-        ).append("\r\n");
-        builder.append(
-                String.format("Battery: %d%% (%s) %.1fC %dV", getBatteryLevel(),
-                        getBatteryPlugged()>0?"charging":"discharging",
-                        (float) getBatteryTemperature() / 10, getBatteryVoltage())
-        ).append("\r\n");
-        builder.append(
-                String.format("Wake: %s", interval2String(getWakeInterval()))
-        ).append("\r\n");
-        builder.append("Locate times: ").append(locateTimesStr()).append("\r\n");
-        builder.append(
-                String.format("Timeout: %s", interval2String(getIdleTimeout()))
-        ).append("\r\n");
-        builder.append(
-                String.format("GPS: %s", interval2String(getGpsTimeout()))
-        );
-        return builder.toString();
-    }
-
-    public String locationString() {
-        StringBuilder builder = new StringBuilder();
-
-        if( getLocation() == null ){
-            return "No location";
-        }
-
-        Location loc = getLocation();
-
-        String locationType = loc.getProvider();
-        if( loc.getExtras()!=null && loc.getExtras().containsKey( "networkLocationType" ) ){
-            locationType = loc.getExtras().getString("networkLocationType");
-        }
-
-        builder.append(
-                String.format("Location via %s (%.0fm)", locationType, getLocation().getAccuracy())
-        ).append("\r\n");
-
-        if( loc.getProvider().equals( LocationManager.GPS_PROVIDER ) ) {
-            builder.append(
-                    String.format("SAT: %d/%d, TTFF: %d sec", getSatellitesUsed(), getSatellites(), (int) Math.ceil(getTimeToFirstFix() / 1000))
-            ).append("\r\n");
-        }
-        builder.append(
-                String.format("Coord: %.5f %.5f", getLocation().getLatitude(), getLocation().getLongitude())
-        );
-        return builder.toString();
-    }*/
-
-    public void beginUpdate(boolean useLoc) {
-        if( useLoc ) {
-            location = null;
-            hasLocation = false;
-
-            satellites = 0;
-            satellitesUsed = 0;
-            timeToFirstFix = 0;
-        }
-        hasBattery = false;
-    }
-
     public int getTimeToFirstFix() {
         return timeToFirstFix;
     }
@@ -237,13 +160,15 @@ public class CarState extends Observable {
         this.batteryTemperature = batteryTemperature;
     }
 
+
+    private Long wakeInterval = null;
     public long getWakeInterval() {
+        if(wakeInterval==null)
+            wakeInterval = preferences.getLong("wake_interval", 60*60*1000 );
         return wakeInterval;
     }
-
     public void setWakeInterval(long wakeInterval) {
         this.wakeInterval = wakeInterval;
-
         preferences.edit()
                 .putLong("wake_interval", wakeInterval)
                 .apply();
@@ -261,22 +186,25 @@ public class CarState extends Observable {
         this.gpsEnabled = gpsEnabled;
     }
 
+    private Long gpsTimeout = null;
     public long getGpsTimeout() {
+        if(gpsTimeout==null)
+            gpsTimeout = preferences.getLong("gps_timeout", 5*60*1000);
         return gpsTimeout;
     }
-
     public void setGpsTimeout(long gpsTimeout) {
         this.gpsTimeout = gpsTimeout;
-
         preferences.edit()
                 .putLong("gps_timeout", gpsTimeout )
                 .apply();
     }
 
+    private Long idleTimeout;
     public long getIdleTimeout() {
+        if(idleTimeout==null)
+            idleTimeout = preferences.getLong("idle_timeout", 5*60*1000);
         return idleTimeout;
     }
-
     public void setIdleTimeout(long idleTimeout) {
         this.idleTimeout = idleTimeout;
         preferences.edit()
@@ -284,38 +212,92 @@ public class CarState extends Observable {
                 .apply();
     }
 
-    public boolean hasFullInfo() {
-        return hasLocation && hasBattery;
+    private Long poweroffTimeout = null;
+
+    public long getPoweroffTimeout() {
+        if( poweroffTimeout==null ){
+            poweroffTimeout = preferences.getLong("poweroff_timeout", 2*60*1000);
+        }
+        return poweroffTimeout;
+    }
+
+    public void setPoweroffTimeout(long poweroffTimeout) {
+        this.poweroffTimeout = poweroffTimeout;
+        preferences.edit().putLong("poweroff_timeout", poweroffTimeout).apply();
+    }
+
+    public JSONObject toJSON() throws JSONException {
+        JSONObject message = new JSONObject();
+
+        message.put("batt", getBatteryLevel() );
+        message.put("charge", getBatteryPlugged() );
+        message.put("temp", getBatteryTemperature()/10.0 );
+        message.put("volt", getBatteryVoltage());
+
+        Location loc = getLocation();
+        message.put("_type", "location")
+                .put("acc", loc.getAccuracy())
+                .put("lat", loc.getLatitude())
+                .put("lon", loc.getLongitude())
+                .put("tst", loc.getTime() / 1000)
+                .put("src", loc.getProvider());
+
+        if( loc.getProvider().equals(LocationManager.GPS_PROVIDER) ) {
+            message
+                    .put("vel", loc.getSpeed())
+                    .put("cog", loc.getBearing())
+                    .put("alt", loc.getAltitude())
+                    .put("ttf", getTimeToFirstFix())
+                    .put("sat", String.format("%d/%d", getSatellitesUsed(), getSatellites()));
+        }
+        return message;
     }
 
     public Location getLocation() {
         return location;
     }
 
+    public boolean isCharging(){
+        return getBatteryPlugged()>0;
+    }
+
+    public boolean isFineLocation() {
+        return fineLocation;
+    }
+
+    private void addLocationToTrack() {
+        try {
+            track.put(toJSON());
+        }catch(JSONException e){
+            // ignore
+        }
+    }
+    public int getTrackSize(){
+        return track.length();
+    }
+    public JSONArray getCurrentTrack(){
+        return track;
+    }
+    public void startNewTrack(){
+        track = new JSONArray();
+        lastLocation = null;
+    }
+
     public void setLocation(Location location) {
-        if (this.location == null) {
-            this.location = location;
+        this.location = location;
+
+        if( isTracking() && (lastLocation==null || location.distanceTo( lastLocation ) >= getTrackDistance()) ){
+            lastLocation = location;
+            addLocationToTrack();
         }
 
-        if (location.getProvider().equals(LocationManager.GPS_PROVIDER)) {
-            this.location = location;
-        }
+        String provider = location.getProvider();
+        float minDistance = provider.equals(LocationManager.NETWORK_PROVIDER) ? 600:50;
 
-        if (location.getProvider().equals(this.location.getProvider()) && location.getAccuracy() < this.location.getAccuracy()) {
-            this.location = location;
-        }
+        fineLocation = (provider.equals(LocationManager.GPS_PROVIDER) || !gpsEnabled) && location.getAccuracy() < minDistance;
 
-        float minDistance = 50;
-        if (location.getProvider().equals(LocationManager.NETWORK_PROVIDER)) {
-            minDistance = 500;
-        }
-
-        if ( (location.getProvider().equals(LocationManager.GPS_PROVIDER)  || !gpsEnabled) && location.getAccuracy() < minDistance ) {
-            Log.i(getClass().getPackage().getName(), "hasLocation");
-            this.hasLocation = true;
-            setChanged();
-            notifyObservers();
-        }
+        setChanged();
+        notifyObservers();
     }
 
     public int getBatteryLevel() {
@@ -331,9 +313,6 @@ public class CarState extends Observable {
             batteryWarning = false;
             batteryNotified = false;
         }
-        this.hasBattery = true;
-        setChanged();
-        notifyObservers();
     }
 
     public boolean isBatteryWarning() {
@@ -356,7 +335,35 @@ public class CarState extends Observable {
         this.batteryPlugged = batteryPlugged;
     }
 
+    private Float trackDistance = null;
+    public float getTrackDistance() {
+        if( trackDistance==null){
+            trackDistance = preferences.getFloat("track_distance", (float) 500.0);
+        }
+        return trackDistance;
+    }
+
+    public void setTrackDistance(float trackDistance) {
+        this.trackDistance = trackDistance;
+        preferences.edit().putFloat("track_distance", trackDistance).apply();
+    }
+
+    private Boolean tracking = null;
+    public boolean isTracking() {
+        if( tracking == null ){
+            tracking = preferences.getBoolean("tracking", true);
+        }
+        return tracking;
+    }
+    public void setTracking(boolean tracking) {
+        this.tracking = tracking;
+        preferences.edit().putBoolean("tracking", tracking);
+    }
+
+    private Boolean timeSync = null;
     public boolean isTimeSync() {
+        if( timeSync==null )
+            timeSync = this.preferences.getBoolean("time_sync", false);
         return timeSync;
     }
 
@@ -364,6 +371,7 @@ public class CarState extends Observable {
         this.timeSync = timeSync;
         this.preferences.edit().putBoolean("time_sync", timeSync).apply();
     }
+
 
     public String getMqttUrl() {
         return preferences.getString("mqttUrl","");
@@ -426,4 +434,6 @@ public class CarState extends Observable {
         setChanged();
         notifyObservers();
     }
+
+
 }

@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.Date;
 
 @SuppressWarnings("unused")
 public class DefaultCommands extends BotCommands {
@@ -24,7 +25,8 @@ public class DefaultCommands extends BotCommands {
     public JSONObject execLocate(String... args) throws JSONException {
         getService().sendBroadcast(
                 new Intent(ControlService.LOCATE_ACTION)
-                        .putExtra("info", false)
+/*                        .putExtra("info", false)
+                        .putExtra("sleep", false)*/
                         .putExtra("location", (Integer) 2)
         );
         return null;
@@ -32,18 +34,25 @@ public class DefaultCommands extends BotCommands {
     public JSONObject execCell(String... args) throws JSONException {
         getService().sendBroadcast(
                 new Intent(ControlService.LOCATE_ACTION)
-                        .putExtra("info", false)
+/*                        .putExtra("info", false)
+                        .putExtra("sleep", false)*/
                         .putExtra("location", (Integer) 1)
         );
         return null;
     }
 
+    /*
     public JSONObject execInfo(String... args) throws JSONException {
         getService().sendBroadcast(
                 new Intent(ControlService.WAKE_ACTION)
                         .putExtra("info", true)
                         .putExtra("location", (Integer) 0)
         );
+        return null;
+    }*/
+
+    public JSONObject execPing(String... args) throws  JSONException{
+        getManager().sendEvent("Pong");
         return null;
     }
 
@@ -94,6 +103,7 @@ public class DefaultCommands extends BotCommands {
         return null;
     }
 
+    /*
     public JSONObject execLocatetimes(String... args) throws JSONException {
         JSONObject result = new JSONObject();
 
@@ -159,6 +169,7 @@ public class DefaultCommands extends BotCommands {
         }
         return result;
     }
+*/
 
     @Override
     protected JSONObject onContent(File content) {
@@ -180,11 +191,12 @@ public class DefaultCommands extends BotCommands {
     }
 
 
+/*
     public JSONObject execUpdate(String... args) throws JSONException {
         JSONObject result = new JSONObject();
         this.updateMode = true;
         result.put("text", "Ok, send me the update");
         return result;
     }
-
+*/
 }

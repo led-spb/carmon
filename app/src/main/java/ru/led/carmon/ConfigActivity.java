@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -18,6 +19,7 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
     private EditText editWakeInterval;
     private EditText editIdleTimeout;
     private EditText editLocateTimes;
+    private EditText editGpsTimeout;
     private CheckBox editTimesync;
 
     @Override
@@ -36,16 +38,19 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
         editWakeInterval = (EditText) findViewById(R.id.editWakeInterval);
         editIdleTimeout = (EditText) findViewById(R.id.editIdleTimeout);
         editLocateTimes = (EditText) findViewById(R.id.editLocateTimes);
+        editGpsTimeout = (EditText) findViewById(R.id.editGpsTimeout);
 
         editUrl.setText( state.getMqttUrl() );
         editUsername.setText( state.getMqttUsername() );
         editPassword.setText( state.getMqttPassword() );
-        editClientId.setText( state.getMqttClientId() );
+        editClientId.setText(state.getMqttClientId());
 
-        editTimesync.setChecked( state.isTimeSync() );
+        editTimesync.setChecked(state.isTimeSync());
 
-        editWakeInterval.setText(String.format("%d", state.getWakeInterval() ) );
-        editIdleTimeout.setText( String.format("%d", state.getIdleTimeout() ) );
+        editWakeInterval.setText( String.format("%d", state.getWakeInterval() / 1000 / 60));
+        editIdleTimeout.setText(  String.format("%d", state.getIdleTimeout() / 1000 / 60) );
+        editGpsTimeout.setText( String.format("%d", state.getGpsTimeout() / 1000 / 60 ) );
+
         editLocateTimes.setText(  state.locateTimesStr() );
 
         Button btn = (Button) findViewById(R.id.btnSave);
@@ -54,24 +59,22 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
 
     @Override
     public void onClick(View view) {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-
         CarState state = ((CarMonApp)getApplication()).getCarState();
+
         state.setMqttUrl( editUrl.getText().toString() );
         state.setMqttUsername(editUsername.getText().toString());
         state.setMqttPassword(editPassword.getText().toString());
         state.setMqttClientId(editClientId.getText().toString());
-        state.setTimeSync( editTimesync.isChecked() );
+        state.setTimeSync(editTimesync.isChecked());
 
-        state.setLocateTimes( editLocateTimes.getText().toString() );
-        /*
-        preferences.edit()
-                .putString("mqttUrl",      )
-                .putString("mqttUsername",  )
-                .putString("mqttPassword",  )
-                .putString("mqttClientId", editClientId.getText().toString() )
-                .putBoolean("time_sync",    )
-                .apply();*/
+        state.setLocateTimes(editLocateTimes.getText().toString());
+
+        Log.d("edit", editWakeInterval.getText().toString());
+
+        state.setWakeInterval(Long.parseLong(editWakeInterval.getText().toString()) * 1000 * 60 );
+        state.setIdleTimeout(Long.parseLong(editIdleTimeout.getText().toString()) * 1000 * 60 );
+        state.setGpsTimeout(Long.parseLong(editGpsTimeout.getText().toString()) *1000 * 60 );
+
         finish();
     }
 }

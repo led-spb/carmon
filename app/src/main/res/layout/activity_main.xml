@@ -13,7 +13,7 @@
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Start"
+        android:text="@string/btnStart"
         android:id="@+id/btnStart"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true" />
@@ -22,7 +22,7 @@
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Stop"
+        android:text="@string/btnStop"
         android:id="@+id/btnStop"
         android:layout_alignParentTop="true"
         android:layout_toLeftOf="@+id/btnConfig" />
@@ -31,17 +31,27 @@
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Locate"
+        android:text="@string/btnLocate"
         android:id="@+id/btnLocate"
         android:layout_alignParentTop="true"
         android:layout_toRightOf="@+id/btnStart"
+        android:layout_toLeftOf="@+id/btnSleep"
+    />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/btnSleep"
+        android:id="@+id/btnSleep"
+        android:layout_alignParentTop="true"
         android:layout_toLeftOf="@+id/btnStop" />
 
     <Button
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Config"
+        android:text="@string/btnConfig"
         android:id="@+id/btnConfig"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true" />
@@ -58,6 +68,16 @@
             android:layout_height="wrap_content"
             android:text=""
             android:id="@+id/stateStatus" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:id="@+id/stateWake" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:id="@+id/stateLocate" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -79,14 +99,6 @@
             android:text=""
             android:id="@+id/stateLocation" />
 
-        <ru.yandex.yandexmapkit.MapView
-            android:id="@+id/map"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            android:apiKey="1234567890"
-            android:tag="static"
-            android:layout_weight="1"
-            />
     </LinearLayout>
 
 </RelativeLayout>

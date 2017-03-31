@@ -104,7 +104,9 @@
         android:layout_below="@+id/labelViewWakeInterval"
         android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true"
+        android:numeric="integer"
         android:inputType="numberDecimal" />
+
 
     <TextView
         android:layout_width="wrap_content"
@@ -115,7 +117,6 @@
         android:layout_below="@+id/editWakeInterval"
         android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true" />
-
     <EditText
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -143,6 +144,33 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="@string/gps_timeout"
+        android:id="@+id/labelGpsTimeout"
+        android:layout_below="@+id/editLocateTimes"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/editGpsTimeout"
+        android:layout_below="@+id/labelGpsTimeout"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true" />
+
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/use_ntp"
+        android:id="@+id/checkBoxTimesync"
+        android:layout_below="@+id/editGpsTimeout"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentLeft="true" />
+
     <Button
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
@@ -150,17 +178,7 @@
         android:text="@string/btnSave"
         android:id="@+id/btnSave"
         android:layout_below="@+id/checkBoxTimesync"
-        android:layout_alignParentLeft="true" />
-
-    <CheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="NTP time sync"
-        android:id="@+id/checkBoxTimesync"
-        android:layout_below="@+id/editLocateTimes"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentLeft="true" />
-
+        android:layout_centerHorizontal="true" />
 
 </RelativeLayout>
     </ScrollView>

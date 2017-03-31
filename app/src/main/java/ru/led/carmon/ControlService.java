@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 public class ControlService extends Service {
@@ -19,6 +18,9 @@ public class ControlService extends Service {
     public static final String WAKE_ACTION     = "ru.led.carmon.WAKE";
     public static final String LOCATE_ACTION   = "ru.led.carmon.LOCATE";
     public static final String SLEEP_ACTION    = "ru.led.carmon.SLEEP";
+
+    public static final String POWER_ON        = "ru.led.carmon.POWER_ON";
+    public static final String POWER_OFF       = "ru.led.carmon.POWER_OFF";
     public static final String TIMESYNC_ACTION = "ru.led.carmon.TIMESYNC_ACTION";
 
     private ActionReceiver actionReceiver;
@@ -55,49 +57,8 @@ public class ControlService extends Service {
         return mBot;
     }
 
-    public void setLocateTimes(String times){
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putString("locate_times", times)
-                .commit();
-
-        carState.setLocateTimes(times);
-        actionReceiver.scheduleLocate(this, carState.getNextLocateTime() );
-    }
-
-    public void setIdleTimeout( long timeout ){
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putLong("idle_timeout", timeout)
-                .commit();
-        carState.setIdleTimeout(timeout);
-        actionReceiver.scheduleSleep(this);
-    }
-
-    public void setWakeInterval(long interval){
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putLong("wake_interval", interval)
-                .commit();
-        carState.setWakeInterval(interval);
-
-        actionReceiver.scheduleWake(this, carState.getWakeInterval());
-    }
-
-    public void setGpsTimeout( long timeout ){
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putLong("gps_timeout", timeout)
-                .commit();
-        carState.setGpsTimeout(timeout);
-    }
-/*
-    public class LocalBinder extends Binder{
-        public ControlService getService(){
-            return ControlService.this;
-        }
-    }
-    private final Binder mBinder = new LocalBinder();
-*/
     @Override
     public IBinder onBind(Intent intent) {
-        //return mBinder;
         return null;
     }
 
@@ -110,6 +71,8 @@ public class ControlService extends Service {
         Log.i(getClass().getPackage().getName(), "ControlService stopped");
 
         unregisterReceiver(actionReceiver);
+        actionReceiver.stopLocation(this);
+
         mBot.finish();
         stopForeground(true);
         getCarState().setStatus("stopped");
@@ -161,6 +124,8 @@ public class ControlService extends Service {
         filter.addAction(LOCATE_ACTION);
         filter.addAction(SLEEP_ACTION);
         filter.addAction(TIMESYNC_ACTION);
+        filter.addAction(POWER_ON);
+        filter.addAction(POWER_OFF);
 
         filter.addAction(Intent.ACTION_POWER_CONNECTED);
         filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
@@ -185,9 +150,8 @@ public class ControlService extends Service {
         startForeground(NOTIFY_ID, notify);
 
         sendBroadcast(new Intent(LOCATE_ACTION));
-        mBot.sendEvent("Service started");
+        mBot.sendEvent("Tracker started");
     }
-
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {

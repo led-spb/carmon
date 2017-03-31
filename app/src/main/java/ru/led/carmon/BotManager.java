@@ -1,15 +1,19 @@
 package ru.led.carmon;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.Log;
 
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,18 +27,16 @@ import java.util.Properties;
 public class BotManager extends Observable implements MqttCallback {
     public static String TOPIC_ROOT = "owntracks/";
     public static String TOPIC_STATE = TOPIC_ROOT+"%s/%s";
+    public static String TOPIC_WILL = TOPIC_ROOT+"%s/%s/msg";
     public static String TOPIC_EVENT = TOPIC_ROOT+"%s/%s/msg";
+    public static String TOPIC_TRACK = TOPIC_ROOT+"%s/%s/track";
     public static String TOPIC_CMD = TOPIC_ROOT+"%s/%s/cmd";
     public static String TRACKER_ID = "tracker";
 
     private CarState carState;
 
-    private String mqttUrl;
-    private String mqttUsername;
-    private String mqttPassword;
-    private String mqttClientId;
-
     private MqttDefaultFilePersistence dataStore;
+    //private MqttAsyncClient mqttClient;
     private MqttClient mqttClient;
 
     private boolean mStopRequest = false;
@@ -44,30 +46,27 @@ public class BotManager extends Observable implements MqttCallback {
     private BotCommands commands;
 
 
-    private void connectMqtt() throws Exception {
-        mqttUrl      = carState.getMqttUrl();
-        mqttUsername = carState.getMqttUsername();
-        mqttPassword = carState.getMqttPassword();
-        mqttClientId = carState.getMqttClientId();
-
+    private /*IMqttToken*/ void connectMqtt() throws Exception {
         MqttConnectOptions options = new MqttConnectOptions();
 
         Properties ssl = new Properties();
         ssl.put("com.ibm.ssl.protocol", "TLSv1");
         options.setSSLProperties(ssl);
         options.setCleanSession(false);
-        if( !mqttUsername.equals("") ) {
-            options.setUserName( mqttUsername );
+        if( !carState.getMqttUsername().equals("") ) {
+            options.setUserName( carState.getMqttUsername() );
         }
-        if( !mqttPassword.equals("") ) {
-            options.setPassword( mqttPassword.toCharArray() );
+        if( !carState.getMqttPassword().equals("") ) {
+            options.setPassword( carState.getMqttPassword().toCharArray() );
         }
-
-        mqttClient = new MqttClient( mqttUrl, mqttClientId, dataStore );
-        mqttClient.setCallback(this);
+        /*
+        String lwt = String.format( "{\"type\":\"msg\",\"tst\":%d,\"text\":\"\"}" );
+        options.setWill(
+                String.format(TOPIC_WILL, carState.getMqttClientId(), TRACKER_ID),
+                lwt.getBytes(), 1, false
+        );*/
         mqttClient.connect(options);
-
-        carState.setMqttConnected(true);
+        //return mqttClient.connect(options);
     }
 
     private void closeMqttConnection(){
@@ -76,10 +75,12 @@ public class BotManager extends Observable implements MqttCallback {
                 if( mqttClient.isConnected() )
                     mqttClient.disconnect();
                 mqttClient.close();
-                mqttClient = null;
-                carState.setMqttConnected(false);
+                //dataStore.close();
             } catch (MqttException e) {
-                e.printStackTrace();
+                Log.e(getClass().getPackage().getName(), "Close MQTT connection", e);
+            }
+            finally{
+                carState.setMqttConnected(false);
             }
         }
     }
@@ -95,7 +96,9 @@ public class BotManager extends Observable implements MqttCallback {
         public void run() {
             Log.i(getClass().getPackage().getName(), "Started bot thread");
             try {
+
                 while( !mStopRequest ){
+                    // Wait for network ready
                     synchronized (pauseLock){
                         while( !running){
                             try {
@@ -106,67 +109,72 @@ public class BotManager extends Observable implements MqttCallback {
                     }
 
                     try {
+                        Log.i(getClass().getPackage().getName(), "Start MQTT message loop");
+                        // connectMqtt().waitForCompletion();
                         connectMqtt();
-                        Log.i("carmon", String.format("Connected to MQTT broker %s", mqttUrl));
-                        mqttClient.subscribe(String.format(TOPIC_CMD, mqttClientId, TRACKER_ID), 1);
+                        Log.i(getClass().getPackage().getName(), String.format("Connected to MQTT broker %s", carState.getMqttUrl()));
 
-                        // Get messages from queue
+                        mqttClient.subscribe(String.format(TOPIC_CMD, carState.getMqttClientId(), TRACKER_ID), 1);
+                        carState.setMqttConnected(true);
+
+                        // Send messages from queue
                         while( !mStopRequest && mqttClient!=null && mqttClient.isConnected() ) {
+                            // Get next message from queue
                             JSONObject message = null;
-
-                            synchronized (mResponseQueue) {
-                                while (!mResponseQueue.isEmpty() && mqttClient!=null && mqttClient.isConnected() ) {
+                            int queueSize = 0;
+                            synchronized (mResponseQueue){
+                                if( !mResponseQueue.isEmpty() ){
                                     message = mResponseQueue.remove(0);
-
-                                    try {
-                                        try {
-                                            String type = message.optString("type", "");
-                                            JSONObject payload = message.getJSONObject("data");
-
-                                            if (type.equals("event")) {
-                                                mqttClient.publish(String.format(TOPIC_EVENT, mqttClientId, TRACKER_ID),
-                                                        payload.toString().getBytes(), 1, false
-                                                );
-                                            }
-                                            if (type.equals("status")) {
-                                                mqttClient.publish(String.format(TOPIC_STATE, mqttClientId, TRACKER_ID),
-                                                        payload.toString().getBytes(), 1, true
-                                                );
-                                            }
-                                        } catch (JSONException e) {
-                                            Log.e(getClass().getPackage().getName(), "Malformed JSON message", e);
-                                        }
-                                    }catch(Exception e){
-                                        mResponseQueue.add(0, message);
-                                        throw e;
-                                    }
-                                    carState.setQueueLength(mResponseQueue.size());
+                                    queueSize = mResponseQueue.size();
                                 }
                             }
-                            Thread.sleep(500);
+
+                            if( message!=null ){
+                                try{
+                                    try {
+                                        String topic = message.optString("topic", "");
+                                        boolean retain = message.optBoolean("retain", false);
+                                        int qos = message.optInt("qos", 1);
+                                        JSONObject payload = message.getJSONObject("payload");
+
+                                        mqttClient.publish( topic, payload.toString().getBytes(), qos, retain );
+                                    } catch (JSONException e) {
+                                        Log.e(getClass().getPackage().getName(), "Malformed JSON message", e);
+                                    }
+                                }catch(Exception e){
+                                    // Requeue failed messages
+                                    synchronized (mResponseQueue){
+                                        mResponseQueue.add(0, message);
+                                    }
+                                    throw e;
+                                }
+                                carState.setQueueLength( queueSize );
+                            }
+
+                            // Sleep if queue is empty
+                            if( message==null && mqttClient!=null && mqttClient.isConnected() ){
+                                Thread.sleep(500);
+                            }
                         }
-                        // Pause before reconnect
-                        reconnectDelay();
-                    }catch(Exception e){
+                    }catch( Exception e ){
                         Log.e(getClass().getPackage().getName(), "Error MQTT connection", e);
+                    }finally{
+                        Log.i(getClass().getPackage().getName(), "Finish MQTT message loop");
                         // Pause before reconnect
                         reconnectDelay();
                     }
                 }
-            }catch( InterruptedException e ){
+            }catch( Exception e ){
+                Log.e( getClass().getPackage().getName(), "MQTT creation error", e );
+            }finally {
+                closeMqttConnection();
+                Log.i( getClass().getPackage().getName(), "Stopped bot request thread" );
             }
-
-            closeMqttConnection();
-            Log.i( getClass().getPackage().getName(), "Stopped bot request thread" );
         }
     };
 
     public BotManager( Context context, CarState carState, BotCommands commands ) {
         this.carState = carState;
-
-        this.dataStore = new MqttDefaultFilePersistence(
-                context.getCacheDir().getAbsolutePath()
-        );
 
         mResponseQueue = new ArrayList<JSONObject>();
 
@@ -175,6 +183,26 @@ public class BotManager extends Observable implements MqttCallback {
 
         this.commands = commands;
         this.commands.setManager(this);
+
+        try {
+            dataStore = new MqttDefaultFilePersistence(
+                    context.getCacheDir().getAbsolutePath()
+            );
+            //mqttClient = new MqttAsyncClient( carState.getMqttUrl(), carState.getMqttClientId(), dataStore );
+            mqttClient = new MqttClient( carState.getMqttUrl(), carState.getMqttClientId(), dataStore );
+            mqttClient.setCallback( this );
+
+            /*
+            DisconnectedBufferOptions options = new DisconnectedBufferOptions();
+            options.setBufferEnabled(true);
+            options.setBufferSize(50);
+            options.setDeleteOldestMessages(true);
+            options.setPersistBuffer(true);
+            mqttClient.setBufferOpts(options);
+            */
+        } catch (MqttException e) {
+            Log.e( getClass().getPackage().getName(), "Create MQTT client", e );
+        }
 
         Thread botThread = new Thread(botRunnable);
         botThread.start();
@@ -204,6 +232,31 @@ public class BotManager extends Observable implements MqttCallback {
             mResponseQueue.add( message );
             carState.setQueueLength(mResponseQueue.size());
         }
+        /*
+        try {
+            String topic = message.optString("topic", "");
+            boolean retain = message.optBoolean("retain", false);
+            int qos = message.optInt("qos", 1);
+            JSONObject payload = message.getJSONObject("payload");
+
+            mqttClient.publish( topic, payload.toString().getBytes(), qos, retain );
+        } catch (JSONException e) {
+            Log.e(getClass().getPackage().getName(), "Malformed JSON message", e);
+        } catch (Exception e) {
+            Log.e(getClass().getPackage().getName(), "Fail to delivery MQTT message", e);
+        }*/
+    }
+
+    public void sendObject(String format, boolean retain, JSONObject payload){
+        JSONObject msg = new JSONObject();
+        try {
+            msg.put("topic", String.format( format, carState.getMqttClientId(), TRACKER_ID));
+            msg.put("retain", retain);
+            msg.put("payload", payload);
+            sendMessage(msg);
+        }catch (JSONException e){
+            // ignore
+        }
     }
 
     public void sendEvent(String text){
@@ -214,9 +267,8 @@ public class BotManager extends Observable implements MqttCallback {
             payload.put("text", text);
             payload.put("tst", (new Date()).getTime()/1000 );
 
-            msg.put("type", "event");
-            msg.put("data", payload);
-
+            msg.put("topic", String.format(TOPIC_EVENT, carState.getMqttClientId(), TRACKER_ID) );
+            msg.put("payload", payload);
             sendMessage(msg);
         } catch (JSONException e) {
         }
@@ -225,8 +277,9 @@ public class BotManager extends Observable implements MqttCallback {
     public void sendStatus(JSONObject status){
         JSONObject msg = new JSONObject();
         try {
-            msg.put("type", "status");
-            msg.put("data", status);
+            msg.put("topic", String.format(TOPIC_STATE, carState.getMqttClientId(), TRACKER_ID));
+            msg.put("retain", true );
+            msg.put("payload", status);
 
             sendMessage(msg);
         } catch (JSONException e) {
@@ -244,19 +297,18 @@ public class BotManager extends Observable implements MqttCallback {
         Log.i( getClass().getPackage().getName(), String.format("MQTT message from %s: %s", topic, new String(message.getPayload()) ) );
         JSONObject payload = new JSONObject( new String(message.getPayload()) );
 
-
         JSONArray jsonArgs = payload.optJSONArray("args");
         ArrayList<String> args = new ArrayList<String>();
         for(int i=0; jsonArgs!=null && i<jsonArgs.length(); i++ ){
             args.add( jsonArgs.getString(i) );
         }
-        JSONObject result = commands.processCommand(
+        /*JSONObject result = */commands.processCommand(
                 payload.getString("cmd"),
                 args.toArray( new String[args.size()] )
-        );
+        );/*
         if( result!=null ){
             sendMessage( result );
-        }
+        }*/
     }
 
     @Override

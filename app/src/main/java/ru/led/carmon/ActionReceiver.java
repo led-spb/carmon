@@ -15,12 +15,15 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 
 import org.apache.commons.net.ntp.NTPUDPClient;
 import org.apache.commons.net.ntp.TimeInfo;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.PrintWriter;
@@ -30,11 +33,11 @@ import java.util.Calendar;
 
 
 public class ActionReceiver extends BroadcastReceiver implements LocationListener, GpsStatus.Listener {
-    public long POWEROFF_TIMEOUT = 2*60*1000; // 2min
     private ControlService mService;
     private int runCount = 0;
     private long lastTimeSynced = 0;
     private long lastPowerOff = 0;
+    private PowerManager.WakeLock wakeLock;
 
     public ActionReceiver(ControlService service){
         mService = service;
@@ -68,11 +71,11 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
             return;
         }
 
-        if( intent.getAction().equals(Intent.ACTION_POWER_CONNECTED) ){
+        if( intent.getAction().equals(Intent.ACTION_POWER_CONNECTED) || intent.getAction().equals( ControlService.POWER_ON) ){
             beginPowerAction(context);
             return;
         }
-        if( intent.getAction().equals(Intent.ACTION_POWER_DISCONNECTED) ){
+        if( intent.getAction().equals(Intent.ACTION_POWER_DISCONNECTED)  || intent.getAction().equals( ControlService.POWER_OFF) ){
             endPowerAction(context);
             return;
         }
@@ -98,6 +101,79 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                 mService.getBotManager().pause();
             }
             return;
+        }
+    }
+
+    private void beginSleepAction(Context context){
+        synchronized (this) {
+            if (wakeLock != null && wakeLock.isHeld()) {
+                Log.i(getClass().getPackage().getName(), "Wakelock end");
+                wakeLock.release();
+                wakeLock = null;
+            }
+        }
+        mService.getCarState().setStatus("sleep");
+        stopLocation(context);
+        setAirplaneMode(context, 1);
+    }
+
+    private void beginWakeAction(final Context context, final boolean needSleep, final int locationProvider) {
+        synchronized (this) {
+            runCount++;
+            if( wakeLock==null ) {
+                wakeLock = ((PowerManager) context.getSystemService(Context.POWER_SERVICE)).newWakeLock(
+                        PowerManager.PARTIAL_WAKE_LOCK, "CarMonitor"
+                );
+                wakeLock.acquire();
+                Log.i( getClass().getPackage().getName(), "Wakelock begin");
+            }
+        }
+
+        final CarState state = mService.getCarState();
+
+        unScheduleSleep(context);
+        scheduleLocate(context, mService.getCarState().getNextLocateTime());
+        setAirplaneMode(context, 0);
+
+        getBatteryInfo(context);
+
+        if (locationProvider > 0) {
+            startLocation(context, locationProvider > 1, true);
+
+            new Thread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            synchronized (state) {
+                                try {
+                                    state.setStatus("locate");
+                                    state.wait(state.getGpsTimeout());
+                                    mService.getBotManager().sendStatus(state.toJSON());
+                                } catch (Exception e) {
+                                    Log.e(getClass().getPackage().getName(), "Wait location error", e);
+                                } finally {
+                                    endWakeAction(context, !state.isCharging() && needSleep, !state.isCharging());
+                                }
+                            }
+                        }
+                    }
+            ).start();
+        } else {
+            state.setStatus("idle");
+            endWakeAction(context, !state.isCharging() && needSleep, false);
+        }
+    }
+
+    private void endWakeAction(Context context, boolean needSleep, boolean stopLocation){
+        if( stopLocation ) {
+            stopLocation(context);
+        }
+        synchronized (this) {
+            runCount--;
+            if (runCount == 0 && needSleep) {
+                mService.getCarState().setStatus("idle");
+                scheduleSleep(context);
+            }
         }
     }
 
@@ -148,14 +224,61 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
 
     private void beginPowerAction(Context context){
         beginWakeAction(context, false, 2);
-        if( System.currentTimeMillis() - lastPowerOff > POWEROFF_TIMEOUT ){
+        long timeout = mService.getCarState().getPoweroffTimeout();
+
+        if( System.currentTimeMillis() - lastPowerOff > timeout ){
             mService.getBotManager().sendEvent("Ignition is on");
         }
     }
 
     private void endPowerAction(Context context){
+        stopLocation(context);
         scheduleSleep(context);
         lastPowerOff = System.currentTimeMillis();
+        getBatteryInfo(context);
+
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        CarState state = mService.getCarState();
+
+                        synchronized (state) {
+                            state.setStatus("idle");
+                            // send last know location
+                            try {
+                                mService.getBotManager().sendStatus(state.toJSON());
+                            } catch (JSONException e) {
+                                // ignore
+                            }
+
+                            if( state.isTracking() ) {
+                                // send whole track
+                                JSONArray points = state.getCurrentTrack();
+                                if (points.length() > 0) {
+                                    try {
+                                        JSONObject track = new JSONObject();
+                                        track.put("track", points);
+
+                                        /*
+                                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                                        GZIPOutputStream os = new GZIPOutputStream(bos);
+                                        os.write( track.toString().getBytes() );
+                                        os.finish();*/
+
+                                        mService.getBotManager().sendObject(
+                                                BotManager.TOPIC_TRACK, false, track
+                                        );
+                                        state.startNewTrack();
+                                    } catch (Exception e) {
+                                        // ignore
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+        ).start();
     }
 
     public void unScheduleSleep(Context context){
@@ -166,7 +289,7 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
     public void scheduleSleep(Context context ){
         long timeout = mService.getCarState().getIdleTimeout();
 
-        Log.i( getClass().getPackage().getName(), String.format("Schedule sleep after %d minutes", (int)Math.ceil(timeout/60/1000) ) );
+        Log.i(getClass().getPackage().getName(), String.format("Schedule sleep after %d minutes", (int) Math.ceil(timeout / 60 / 1000)));
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
         PendingIntent intent = mService.getSleepIntent();
@@ -186,105 +309,15 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
         }
     }
 
-
     public void scheduleWake(Context context, long interval){
         Log.i(getClass().getPackage().getName(), String.format("Schedule wakeup interval %d minutes", (int) Math.ceil(interval / 60 / 1000)));
-
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent intent = mService.getWakeIntent();
         am.cancel(intent);
 
         am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + interval, interval, intent);
-    }
 
-
-    private void beginSleepAction(Context context){
-        mService.getCarState().setStatus("sleep");
-        setAirplaneMode(context, 1);
-    }
-
-    private void beginWakeAction(final Context context, final boolean needSleep, final int needLocation){
-        synchronized (this){
-            runCount++;
-        }
-
-        unScheduleSleep(context);
-        scheduleLocate(context, mService.getCarState().getNextLocateTime() );
-        setAirplaneMode(context, 0);
-
-        mService.getCarState().beginUpdate( needLocation>0 );
-
-        getBatteryInfo(context);
-        if( needLocation>0 ){
-            mService.getCarState().setStatus("locate");
-            startLocation(context, needLocation > 1);
-        }else{
-            mService.getCarState().setStatus("idle");
-        }
-
-        // Thread wait for car location ready
-        new Thread (
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        CarState state = mService.getCarState();
-
-                        synchronized ( state ){
-                            try {
-                                JSONObject message = new JSONObject();
-
-                                //if( needInfo || (state.isBatteryWarning() && !state.isBatteryNotified()) ) {
-                                    // Status
-                                    // mService.getBotManager().sendMessage( requestId, state.statusString() );
-                                    message.put("batt", state.getBatteryLevel() );
-                                    message.put("charge", state.getBatteryPlugged() );
-
-                                    state.setBatteryNotified(true);
-                                //}
-
-                                // Location
-                                if( needLocation>0 ) {
-                                    // Wait for location
-                                    mService.getCarState().wait( mService.getCarState().getGpsTimeout() );
-                                    stopLocation(context);
-                                }
-                                Location loc = state.getLocation();
-
-                                message.put( "cog", loc.getBearing() );
-                                message.put( "alt", loc.getAltitude() );
-                                message.put( "acc", loc.getAccuracy() );
-                                message.put( "lat", loc.getLatitude() );
-                                message.put( "lon", loc.getLongitude() );
-                                message.put( "vel", loc.getSpeed() );
-                                message.put( "tst", loc.getTime()/1000 );
-
-                                message.put( "_type", "location" );
-
-                                mService.getBotManager().sendStatus( message );
-                            } catch (Exception e) {
-                                Log.e( getClass().getPackage().getName(), "Wait location error", e);
-                            }
-                            finally {
-                                endWakeAction(context, needSleep, needLocation>0);
-                            }
-                        }
-                    }
-                }
-        ).start();
-    }
-
-    private void endWakeAction(Context context, boolean needSleep, boolean needLocation){
-        mService.getCarState().setStatus("idle");
-        if(needLocation) {
-            stopLocation(context);
-        }
-
-        synchronized (this) {
-            runCount--;
-            if (runCount == 0 && needSleep) {
-                scheduleSleep(context);
-            }
-        }
+        mService.getCarState().setFirstWake(System.currentTimeMillis() + interval);
     }
 
     private void setAirplaneMode(Context context, Integer state){
@@ -303,27 +336,27 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
         Intent intent = context.registerReceiver(null, filter);
 
         CarState state = mService.getCarState();
-        synchronized( state ) {
-            state.setBatteryLevel(intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1));
-            state.setBatteryTemperature(intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0));
-            state.setBatteryVoltage(intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0));
-            state.setBatteryPlugged( intent.getIntExtra(BatteryManager.EXTRA_PLUGGED,0) );
 
+        state.setBatteryLevel(intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1));
+        state.setBatteryTemperature(intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0));
+        state.setBatteryVoltage(intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0));
+        state.setBatteryPlugged(intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0));
+/*
             if( state.hasFullInfo() ){
                 state.notifyAll();
             }
-        }
+        }*/
     }
 
-    public void startLocation(Context context, boolean useGps){
-        LocationManager lm = (LocationManager) context.getSystemService( Context.LOCATION_SERVICE );
+    public void startLocation(Context context, boolean useGps, boolean fast){
+        LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE );
 
         mService.getCarState().setGpsEnabled(
                 lm.isProviderEnabled(LocationManager.GPS_PROVIDER) && useGps
         );
-        lm.requestLocationUpdates( LocationManager.NETWORK_PROVIDER, 3000, 10, this );
+        lm.requestLocationUpdates( LocationManager.NETWORK_PROVIDER, fast?5000:60*1000, fast?0:500, this );
         if( useGps ) {
-            lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, 3000, 10, this );
+            lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, fast?5000:60*1000, fast?0:500, this );
         }
         lm.addGpsStatusListener(this);
     }
@@ -337,13 +370,14 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.i( getClass().getPackage().getName(), location.toString());
+        Log.i( getClass().getPackage().getName(), location.toString() );
 
-        synchronized (mService.getCarState()) {
-            mService.getCarState().setLocation( location );
+        CarState state = mService.getCarState();
+        synchronized (state) {
+            state.setLocation(location);
 
-            if( mService.getCarState().hasFullInfo() ){
-                mService.getCarState().notifyAll();
+            if( state.isFineLocation() ){
+                state.notifyAll();
             }
         }
     }
@@ -360,9 +394,12 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                 satellitesInFix++;
             }
         }
-        mService.getCarState().setTimeToFirstFix( status.getTimeToFirstFix() );
-        mService.getCarState().setSatellites(satellites);
-        mService.getCarState().setSatellitesUsed(satellitesInFix);
+        CarState state = mService.getCarState();
+        //synchronized (state) {
+        state.setTimeToFirstFix(status.getTimeToFirstFix());
+        state.setSatellites(satellites);
+        state.setSatellitesUsed(satellitesInFix);
+        //}
     }
 
     @Override
@@ -378,14 +415,13 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
 
     @Override
     public void onProviderDisabled(String provider) {
-        if( provider.equals(LocationManager.GPS_PROVIDER) ) {
+        if ( provider.equals(LocationManager.GPS_PROVIDER) ) {
             CarState state = mService.getCarState();
-
             synchronized (state){
                 state.setGpsEnabled(false);
                 if( state.getLocation()!=null ) {
-                    state.setLocation(state.getLocation());
-                    if (state.hasFullInfo()) {
+                    state.setLocation( state.getLocation() );
+                    if (state.isFineLocation()) {
                         state.notifyAll();
                     }
                 }

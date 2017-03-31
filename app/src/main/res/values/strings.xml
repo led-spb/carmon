@@ -9,8 +9,17 @@
     <string name="mqtt_clientid">Client ID</string>
     <string name="mqtt_keepalive">Keepalive</string>
 
-    <string name="wake_interval">Wake interval, minutes</string>
-    <string name="idle_timeout">Idle timeout, minutes</string>
+    <string name="wake_interval">Wake interval</string>
+    <string name="idle_timeout">Idle timeout</string>
     <string name="locate_times">Locate times</string>
+    <string name="gps_timeout">GPS timeout</string>
+    <string name="use_ntp">Use NTP time sync</string>
+
     <string name="btnSave">Save</string>
+    <string name="btnLocate">Locate</string>
+    <string name="btnSleep">Sleep</string>
+    <string name="btnStart">Start</string>
+    <string name="btnStop">Stop</string>
+    <string name="btnConfig">Config</string>
+
 </resources>
