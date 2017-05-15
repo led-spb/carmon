@@ -71,11 +71,17 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
             return;
         }
 
-        if( intent.getAction().equals(Intent.ACTION_POWER_CONNECTED) || intent.getAction().equals( ControlService.POWER_ON) ){
+        if( intent.getAction().equals(Intent.ACTION_POWER_CONNECTED) ){
             beginPowerAction(context);
             return;
         }
-        if( intent.getAction().equals(Intent.ACTION_POWER_DISCONNECTED)  || intent.getAction().equals( ControlService.POWER_OFF) ){
+        if( intent.getAction().equals(Intent.ACTION_POWER_DISCONNECTED) ){
+            lastPowerOff = System.currentTimeMillis();
+            schedulePowerOff(context);
+            return;
+        }
+
+        if( intent.getAction().equals(ControlService.POWER_OFF) ){
             endPowerAction(context);
             return;
         }
@@ -223,6 +229,8 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
     }
 
     private void beginPowerAction(Context context){
+        unSchedulePowerOff(context);
+
         beginWakeAction(context, false, 2);
         long timeout = mService.getCarState().getPoweroffTimeout();
 
@@ -234,7 +242,6 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
     private void endPowerAction(Context context){
         stopLocation(context);
         scheduleSleep(context);
-        lastPowerOff = System.currentTimeMillis();
         getBatteryInfo(context);
 
         new Thread(
@@ -252,27 +259,26 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                                 // ignore
                             }
 
-                            if( state.isTracking() ) {
-                                // send whole track
-                                JSONArray points = state.getCurrentTrack();
-                                if (points.length() > 0) {
-                                    try {
-                                        JSONObject track = new JSONObject();
-                                        track.put("track", points);
+                            // send whole track
+                            if( state.isTracking() && state.getTrackSize()>0 ) {
+                                try {
+                                    // Always append finish point to track
+                                    state.addLocationToTrack();
 
-                                        /*
-                                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                                        GZIPOutputStream os = new GZIPOutputStream(bos);
-                                        os.write( track.toString().getBytes() );
-                                        os.finish();*/
+                                    JSONObject track = new JSONObject();
+                                    track.put("track", state.getCurrentTrack() );
+                                    /*
+                                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                                    GZIPOutputStream os = new GZIPOutputStream(bos);
+                                    os.write( track.toString().getBytes() );
+                                    os.finish();*/
 
-                                        mService.getBotManager().sendObject(
-                                                BotManager.TOPIC_TRACK, false, track
-                                        );
-                                        state.startNewTrack();
-                                    } catch (Exception e) {
-                                        // ignore
-                                    }
+                                    mService.getBotManager().sendObject(
+                                            BotManager.TOPIC_TRACK, false, track
+                                    );
+                                    state.startNewTrack();
+                                } catch (Exception e) {
+                                    // ignore
                                 }
                             }
                         }
@@ -318,6 +324,19 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
         am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + interval, interval, intent);
 
         mService.getCarState().setFirstWake(System.currentTimeMillis() + interval);
+    }
+
+    public void schedulePowerOff(Context context){
+        long timeout = mService.getCarState().getPoweroffTimeout();
+        Log.i( getClass().getPackage().getName(), String.format("Schedule power off after %d ms", timeout) );
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+
+        am.cancel(mService.getPowerOffIntent());
+        am.set( AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + timeout, mService.getPowerOffIntent());
+    }
+    public void unSchedulePowerOff(Context context){
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        am.cancel(mService.getPowerOffIntent());
     }
 
     private void setAirplaneMode(Context context, Integer state){

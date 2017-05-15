@@ -45,6 +45,7 @@ public abstract class BotCommands {
                 response = new JSONObject();
                 response.put("text", "Unknown command" );
             } catch (JSONException e1) {
+                // ignore
             }
         } catch (InvocationTargetException e) {
             Log.e( getClass().getPackage().getName(), "processCommand error", e );
@@ -55,5 +56,5 @@ public abstract class BotCommands {
         return response;
     }
 
-    abstract protected JSONObject onContent(File content);
+    //abstract protected JSONObject onContent(File content);
 }

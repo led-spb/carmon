@@ -1,10 +1,7 @@
 package ru.led.carmon;
 
 import android.app.Activity;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -69,7 +66,7 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
 
         state.setLocateTimes(editLocateTimes.getText().toString());
 
-        Log.d("edit", editWakeInterval.getText().toString());
+        //Log.d("edit", editWakeInterval.getText().toString());
 
         state.setWakeInterval(Long.parseLong(editWakeInterval.getText().toString()) * 1000 * 60 );
         state.setIdleTimeout(Long.parseLong(editIdleTimeout.getText().toString()) * 1000 * 60 );

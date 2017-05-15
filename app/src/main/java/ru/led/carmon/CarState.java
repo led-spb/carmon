@@ -265,7 +265,7 @@ public class CarState extends Observable {
         return fineLocation;
     }
 
-    private void addLocationToTrack() {
+    public void addLocationToTrack() {
         try {
             track.put(toJSON());
         }catch(JSONException e){
@@ -286,15 +286,15 @@ public class CarState extends Observable {
     public void setLocation(Location location) {
         this.location = location;
 
-        if( isTracking() && (lastLocation==null || location.distanceTo( lastLocation ) >= getTrackDistance()) ){
+        // Set fine location flag
+        String provider = location.getProvider();
+        float minDistance = provider.equals(LocationManager.NETWORK_PROVIDER) ? 600:50;
+        fineLocation = (provider.equals(LocationManager.GPS_PROVIDER) || !gpsEnabled) && location.getAccuracy() < minDistance;
+
+        if( isTracking() && fineLocation && (lastLocation==null || location.distanceTo( lastLocation ) >= getTrackDistance()) ){
             lastLocation = location;
             addLocationToTrack();
         }
-
-        String provider = location.getProvider();
-        float minDistance = provider.equals(LocationManager.NETWORK_PROVIDER) ? 600:50;
-
-        fineLocation = (provider.equals(LocationManager.GPS_PROVIDER) || !gpsEnabled) && location.getAccuracy() < minDistance;
 
         setChanged();
         notifyObservers();

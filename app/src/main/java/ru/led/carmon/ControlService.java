@@ -7,6 +7,8 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.IBinder;
 import android.util.Log;
@@ -29,7 +31,7 @@ public class ControlService extends Service {
     private CarState    carState;
     private boolean     mStarted = false;
 
-    private PendingIntent wakeIntent, locateIntent, sleepIntent;
+    private PendingIntent wakeIntent, locateIntent, sleepIntent, powerOffIntent;
 
     public PendingIntent getLocateIntent() {
         return locateIntent;
@@ -40,6 +42,10 @@ public class ControlService extends Service {
     public PendingIntent getWakeIntent() {
         return wakeIntent;
     }
+    public PendingIntent getPowerOffIntent() {
+        return powerOffIntent;
+    }
+
 
     public ControlService() {
         actionReceiver = new ActionReceiver(this);
@@ -84,28 +90,28 @@ public class ControlService extends Service {
             mStarted = true;
         }
 
-        locateIntent = PendingIntent.getBroadcast(
-                this,
-                0,
+        int versionCode = -1;
+        try {
+            PackageInfo packInfo = getPackageManager().getPackageInfo( getPackageName(), PackageManager.GET_META_DATA );
+            versionCode = packInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            // ignore;
+        }
+
+        locateIntent = PendingIntent.getBroadcast( this, 0,
                 new Intent(LOCATE_ACTION)
                         .putExtra("sleep", true)
                         .putExtra("location", (Integer)2),
                 0
         );
-        wakeIntent   = PendingIntent.getBroadcast(
-                this,
-                0,
+        wakeIntent   = PendingIntent.getBroadcast( this, 0,
                 new Intent(WAKE_ACTION)
                         .putExtra("sleep", true)
                         .putExtra("location", (Integer)0),
                 0
         );
-        sleepIntent  = PendingIntent.getBroadcast(
-                this,
-                0,
-                new Intent(SLEEP_ACTION),
-                0
-        );
+        sleepIntent  = PendingIntent.getBroadcast( this, 0, new Intent(SLEEP_ACTION), 0 );
+        powerOffIntent = PendingIntent.getBroadcast( this, 0, new Intent(POWER_OFF), 0 );
 
         Log.i( getClass().getPackage().getName(), "ControlService started");
 
