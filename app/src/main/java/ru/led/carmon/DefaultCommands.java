@@ -34,8 +34,6 @@ public class DefaultCommands extends BotCommands {
     public JSONObject execLocate(String... args) throws JSONException {
         getService().sendBroadcast(
                 new Intent(ControlService.LOCATE_ACTION)
-/*                        .putExtra("info", false)
-                        .putExtra("sleep", false)*/
                         .putExtra("location", (Integer) 2)
         );
         return null;
@@ -43,22 +41,10 @@ public class DefaultCommands extends BotCommands {
     public JSONObject execCell(String... args) throws JSONException {
         getService().sendBroadcast(
                 new Intent(ControlService.LOCATE_ACTION)
-/*                        .putExtra("info", false)
-                        .putExtra("sleep", false)*/
                         .putExtra("location", (Integer) 1)
         );
         return null;
     }
-
-    /*
-    public JSONObject execInfo(String... args) throws JSONException {
-        getService().sendBroadcast(
-                new Intent(ControlService.WAKE_ACTION)
-                        .putExtra("info", true)
-                        .putExtra("location", (Integer) 0)
-        );
-        return null;
-    }*/
 
     public JSONObject execPing(String... args) throws  JSONException{
         getManager().sendEvent("Pong");
@@ -112,102 +98,11 @@ public class DefaultCommands extends BotCommands {
         return null;
     }
 
-    /*
-    public JSONObject execLocatetimes(String... args) throws JSONException {
-        JSONObject result = new JSONObject();
-
-
-        StringBuilder w = new StringBuilder();
-        for (String s : args) {
-            w.append(s).append(" ");
-        }
-        getService().setLocateTimes(w.toString().trim());
-        result.put("text", "Ok" );
-
-        return result;
-    }
-
-    public JSONObject execWakeinterval(String... args) throws JSONException{
-        JSONObject result = new JSONObject();
-        if( args.length==0 ){
-            result.put("text", "Need wake interval value in minutes");
-        }else{
-            Integer interval = Integer.parseInt(args[0]);
-            if( interval<1 ){
-                result.put("text", "Minimal interval is 1 minute" );
-            }else {
-                result.put("text", "Ok" );
-
-                getService().setWakeInterval(interval * 60 * 1000);
-            }
-        }
-
-        return result;
-    }
-
-    public JSONObject execTimeout(String... args) throws JSONException {
-        JSONObject result = new JSONObject();
-        if( args.length==0 ){
-            result.put("text", "Need idle timeout value in minutes");
-        }else{
-            Integer timeout = Integer.parseInt(args[0]);
-            if( timeout<0 ){
-                result.put("text", "Minimal idle timeout is 0 minutes" );
-            }else {
-                result.put("text", "Ok" );
-
-                getService().setIdleTimeout(timeout * 60 * 1000);
-            }
-        }
-        return result;
-    }
-
-    public JSONObject execGpstimeout(String... args) throws JSONException {
-        JSONObject result = new JSONObject();
-        if( args.length==0 ){
-            result.put("text", "Need gps timeout value in minutes");
-        }else{
-            Integer timeout = Integer.parseInt(args[0]);
-            if ( timeout<0 ) {
-                result.put("text", "Minimal gps timeout is 0 minutes" );
-            } else {
-                result.put("text", "Ok" );
-
-                getService().setGpsTimeout(timeout * 60 * 1000);
-            }
-        }
-        return result;
-    }
-*/
-
-
-
-    /*@Override
-    protected JSONObject onContent(File content) {
-        JSONObject message = new JSONObject();
-
-        try {
-            if(!updateMode){
-                message.put("text", "Not in update mode" );
-                return message;
-            }
-
-            updateMode = false;
-            message.put("text", String.format("Updating from file %s", content.getAbsolutePath()));
-            return message;
-        } catch (JSONException e) {
-            // ignore
-        }
+    public JSONObject execService(String... args) throws JSONException {
+        getService().startService( ControlService.getStartIntent(getService(), true) );
         return null;
     }
 
-    public JSONObject execUpdate(String... args) throws JSONException {
-        JSONObject result = new JSONObject();
-        this.updateMode = true;
-        result.put("text", "Ok, send me the update");
-        return result;
-    }
-*/
     private File download(String url) throws Exception {
         URL u = new URL(url);
         HttpURLConnection conn = (HttpURLConnection) u.openConnection();

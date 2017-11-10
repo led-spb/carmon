@@ -9,9 +9,11 @@
     <string name="mqtt_clientid">Client ID</string>
     <string name="mqtt_keepalive">Keepalive</string>
 
-    <string name="wake_interval">Wake interval</string>
+    <string name="wake_schedule">Wake cron schedule</string>
+    <string name="locate_schedule">Locate cron schedule</string>
+    <string name="alarm_schedule">Alarm cron schedule</string>
+
     <string name="idle_timeout">Idle timeout</string>
-    <string name="locate_times">Locate times</string>
     <string name="gps_timeout">GPS timeout</string>
     <string name="use_ntp">Use NTP time sync</string>
 

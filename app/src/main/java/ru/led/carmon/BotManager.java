@@ -39,6 +39,7 @@ public class BotManager extends Observable implements MqttCallback {
     private boolean running;
     private final Object pauseLock = new Object();
     private BotCommands commands;
+    private Thread botThread;
 
 
     private /*IMqttToken*/ void connectMqtt() throws Exception {
@@ -131,9 +132,17 @@ public class BotManager extends Observable implements MqttCallback {
                                         String topic = message.optString("topic", "");
                                         boolean retain = message.optBoolean("retain", false);
                                         int qos = message.optInt("qos", 1);
-                                        JSONObject payload = message.getJSONObject("payload");
 
-                                        mqttClient.publish( topic, payload.toString().getBytes(), qos, retain );
+                                        Object payload = message.get("payload");
+                                        byte[] data = null;
+                                        if( payload instanceof JSONObject ) {
+                                            // JSONObject payload = message.getJSONObject("payload")
+                                            data = ((JSONObject)payload).toString().getBytes();
+                                        }else
+                                        if( payload instanceof byte[]){
+                                            data = (byte[]) payload;
+                                        }
+                                        mqttClient.publish( topic, data/*payload.toString().getBytes()*/, qos, retain );
                                     } catch (JSONException e) {
                                         Log.e(getClass().getPackage().getName(), "Malformed JSON message", e);
                                     }
@@ -200,12 +209,21 @@ public class BotManager extends Observable implements MqttCallback {
             Log.e( getClass().getPackage().getName(), "Create MQTT client", e );
         }
 
-        Thread botThread = new Thread(botRunnable);
+        botThread = new Thread(botRunnable);
         botThread.start();
     }
 
     public void finish(){
         mStopRequest = true;
+    }
+
+    public void waitFinish(){
+        finish();
+        try {
+            botThread.join(10000 );
+        } catch (InterruptedException e) {
+            // pass
+        }
     }
 
     public void start(){
@@ -243,7 +261,7 @@ public class BotManager extends Observable implements MqttCallback {
         }*/
     }
 
-    public void sendObject(String format, boolean retain, JSONObject payload){
+    public void sendObject(String format, boolean retain, Object payload){
         JSONObject msg = new JSONObject();
         try {
             msg.put("topic", String.format( format, carState.getMqttClientId(), TRACKER_ID));

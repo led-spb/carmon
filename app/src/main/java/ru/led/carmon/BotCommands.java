@@ -55,6 +55,4 @@ public abstract class BotCommands {
 
         return response;
     }
-
-    //abstract protected JSONObject onContent(File content);
 }

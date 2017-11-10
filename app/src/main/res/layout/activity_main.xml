@@ -56,49 +56,81 @@
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true" />
 
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:id="@+id/btnTestPowerOn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btnStart"
+        android:text="Test PowerOn" />
+
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:id="@+id/btnTestPowerOff"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btnStart"
+        android:layout_alignParentRight="true"
+        android:text="Test PowerOff" />
+
     <LinearLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/btnStart"
-        android:layout_alignParentLeft="true">
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/btnTestPowerOn"
+        android:orientation="vertical">
 
         <TextView
+            android:id="@+id/stateStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:id="@+id/stateStatus" />
+            android:text="" />
+
         <TextView
+            android:id="@+id/stateAlarm"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:id="@+id/stateWake" />
+            android:text="" />
+
         <TextView
+            android:id="@+id/stateWake"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:id="@+id/stateLocate" />
+            android:text="" />
+
         <TextView
+            android:id="@+id/stateLocate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:id="@+id/stateConnection" />
+            android:text="" />
+
         <TextView
+            android:id="@+id/stateConnection"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:id="@+id/stateQueue" />
+            android:text="" />
+
         <TextView
+            android:id="@+id/stateQueue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:id="@+id/stateBattery" />
+            android:text="" />
+
         <TextView
+            android:id="@+id/stateBattery"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:id="@+id/stateLocation" />
+            android:text="" />
+
+        <TextView
+            android:id="@+id/stateLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="" />
 
     </LinearLayout>
+
 
 </RelativeLayout>

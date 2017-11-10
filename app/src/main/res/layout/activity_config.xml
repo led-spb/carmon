@@ -1,112 +1,144 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:paddingBottom="@dimen/activity_vertical_margin"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context=".ConfigActivity">
-
-    <TextView
-        android:layout_width="wrap_content"
+    <RelativeLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/mqtt_url"
-        android:id="@+id/labelMqttURL"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        android:paddingBottom="@dimen/activity_vertical_margin"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin"
+        android:paddingTop="@dimen/activity_vertical_margin"
+        tools:context=".ConfigActivity">
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editMqttURL"
-        android:layout_below="@+id/labelMqttURL"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <TextView
+            android:id="@+id/labelMqttURL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:text="@string/mqtt_url"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/mqtt_username"
-        android:id="@+id/labelMqttUsername"
-        android:layout_below="@+id/editMqttURL"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true"
-        android:password="false" />
+        <EditText
+            android:id="@+id/editMqttURL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelMqttURL" />
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editMqttUsername"
-        android:layout_below="@+id/labelMqttUsername"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <TextView
+            android:id="@+id/labelMqttUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editMqttURL"
+            android:password="false"
+            android:text="@string/mqtt_username"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/mqtt_password"
-        android:id="@+id/labelMqttPassword"
-        android:layout_below="@+id/editMqttUsername"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <EditText
+            android:id="@+id/editMqttUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelMqttUsername" />
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editMqttPassword"
-        android:layout_below="@+id/labelMqttPassword"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true"
-        android:password="true" />
+        <TextView
+            android:id="@+id/labelMqttPassword"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editMqttUsername"
+            android:text="@string/mqtt_password"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/mqtt_clientid"
-        android:id="@+id/labelMqttClientId"
-        android:layout_below="@+id/editMqttPassword"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <EditText
+            android:id="@+id/editMqttPassword"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelMqttPassword"
+            android:password="true" />
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editMqttClientId"
-        android:layout_below="@+id/labelMqttClientId"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <TextView
+            android:id="@+id/labelMqttClientId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editMqttPassword"
+            android:text="@string/mqtt_clientid"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/wake_interval"
-        android:id="@+id/labelViewWakeInterval"
-        android:layout_below="@+id/editMqttClientId"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <EditText
+            android:id="@+id/editMqttClientId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelMqttClientId" />
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editWakeInterval"
-        android:layout_below="@+id/labelViewWakeInterval"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true"
-        android:numeric="integer"
-        android:inputType="numberDecimal" />
+        <TextView
+            android:id="@+id/labelViewAlertInterval"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/editMqttClientId"
+            android:text="@string/alarm_schedule"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
+        <EditText
+            android:id="@+id/editAlertInterval"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelViewAlertInterval"
+            android:numeric="integer" />
+
+        <TextView
+            android:id="@+id/labelViewWakeInterval"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/editAlertInterval"
+            android:text="@string/wake_schedule"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <EditText
+            android:id="@+id/editWakeInterval"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelViewWakeInterval" />
+
+        <TextView
+            android:id="@+id/labelLocateTimes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editWakeInterval"
+            android:text="@string/locate_schedule"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <EditText
+            android:id="@+id/editLocateTimes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelLocateTimes" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -114,7 +146,7 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="@string/idle_timeout"
         android:id="@+id/labelIdleTimeout"
-        android:layout_below="@+id/editWakeInterval"
+        android:layout_below="@+id/editLocateTimes"
         android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true" />
     <EditText
@@ -126,59 +158,41 @@
         android:layout_alignParentRight="true"
         android:inputType="numberDecimal" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/locate_times"
-        android:id="@+id/labelLocateTimes"
-        android:layout_below="@+id/editIdleTimeout"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <TextView
+            android:id="@+id/labelGpsTimeout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editIdleTimeout"
+            android:text="@string/gps_timeout"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editLocateTimes"
-        android:layout_below="@+id/labelLocateTimes"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <EditText
+            android:id="@+id/editGpsTimeout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelGpsTimeout" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/gps_timeout"
-        android:id="@+id/labelGpsTimeout"
-        android:layout_below="@+id/editLocateTimes"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <CheckBox
+            android:id="@+id/checkBoxTimesync"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editGpsTimeout"
+            android:text="@string/use_ntp" />
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editGpsTimeout"
-        android:layout_below="@+id/labelGpsTimeout"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
+        <Button
+            android:id="@+id/btnSave"
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/checkBoxTimesync"
+            android:layout_centerHorizontal="true"
+            android:text="@string/btnSave" />
 
-    <CheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/use_ntp"
-        android:id="@+id/checkBoxTimesync"
-        android:layout_below="@+id/editGpsTimeout"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentLeft="true" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/btnSave"
-        android:id="@+id/btnSave"
-        android:layout_below="@+id/checkBoxTimesync"
-        android:layout_centerHorizontal="true" />
-
-</RelativeLayout>
-    </ScrollView>
+    </RelativeLayout>
+</ScrollView>

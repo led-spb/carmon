@@ -13,9 +13,12 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
     private EditText editUsername;
     private EditText editPassword;
     private EditText editClientId;
-    private EditText editWakeInterval;
+
+    private EditText editWakeSchedule;
+    private EditText editLocateSchedule;
+    private EditText editAlarmSchedule;
+
     private EditText editIdleTimeout;
-    private EditText editLocateTimes;
     private EditText editGpsTimeout;
     private CheckBox editTimesync;
 
@@ -32,23 +35,25 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
         editPassword = (EditText) findViewById(R.id.editMqttPassword);
         editClientId = (EditText) findViewById(R.id.editMqttClientId);
         editTimesync = (CheckBox) findViewById(R.id.checkBoxTimesync);
-        editWakeInterval = (EditText) findViewById(R.id.editWakeInterval);
+        editWakeSchedule = (EditText) findViewById(R.id.editWakeInterval);
         editIdleTimeout = (EditText) findViewById(R.id.editIdleTimeout);
-        editLocateTimes = (EditText) findViewById(R.id.editLocateTimes);
+        editLocateSchedule = (EditText) findViewById(R.id.editLocateTimes);
+        editAlarmSchedule = (EditText) findViewById(R.id.editAlertInterval);
         editGpsTimeout = (EditText) findViewById(R.id.editGpsTimeout);
 
         editUrl.setText( state.getMqttUrl() );
         editUsername.setText( state.getMqttUsername() );
         editPassword.setText( state.getMqttPassword() );
-        editClientId.setText(state.getMqttClientId());
+        editClientId.setText( state.getMqttClientId() );
 
         editTimesync.setChecked(state.isTimeSync());
 
-        editWakeInterval.setText( String.format("%d", state.getWakeInterval() / 1000 / 60));
         editIdleTimeout.setText(  String.format("%d", state.getIdleTimeout() / 1000 / 60) );
         editGpsTimeout.setText( String.format("%d", state.getGpsTimeout() / 1000 / 60 ) );
 
-        editLocateTimes.setText(  state.locateTimesStr() );
+        editAlarmSchedule.setText( state.getAlarmSchedule() );
+        editWakeSchedule.setText( state.getWakeSchedule() );
+        editLocateSchedule.setText(  state.getLocateSchedule() );
 
         Button btn = (Button) findViewById(R.id.btnSave);
         btn.setOnClickListener(this);
@@ -64,11 +69,10 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
         state.setMqttClientId(editClientId.getText().toString());
         state.setTimeSync(editTimesync.isChecked());
 
-        state.setLocateTimes(editLocateTimes.getText().toString());
+        state.setLocateSchedule(editLocateSchedule.getText().toString());
+        state.setWakeSchedule( editWakeSchedule.getText().toString() );
+        state.setAlarmSchedule( editAlarmSchedule.getText().toString() );
 
-        //Log.d("edit", editWakeInterval.getText().toString());
-
-        state.setWakeInterval(Long.parseLong(editWakeInterval.getText().toString()) * 1000 * 60 );
         state.setIdleTimeout(Long.parseLong(editIdleTimeout.getText().toString()) * 1000 * 60 );
         state.setGpsTimeout(Long.parseLong(editGpsTimeout.getText().toString()) *1000 * 60 );
 

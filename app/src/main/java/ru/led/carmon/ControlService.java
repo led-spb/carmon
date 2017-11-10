@@ -29,9 +29,10 @@ public class ControlService extends Service {
     private BotManager  mBot;
     private BotCommands botCommands;
     private CarState    carState;
-    private boolean     mStarted = false;
+    private boolean     started = false;
+    private boolean     serviceMode = false;
 
-    private PendingIntent wakeIntent, locateIntent, sleepIntent, powerOffIntent;
+    private PendingIntent wakeIntent, alarmIntent, locateIntent, sleepIntent, powerOffIntent;
 
     public PendingIntent getLocateIntent() {
         return locateIntent;
@@ -42,6 +43,7 @@ public class ControlService extends Service {
     public PendingIntent getWakeIntent() {
         return wakeIntent;
     }
+    public PendingIntent getAlarmIntent() { return alarmIntent; }
     public PendingIntent getPowerOffIntent() {
         return powerOffIntent;
     }
@@ -56,7 +58,13 @@ public class ControlService extends Service {
     }
 
     public static Intent getStartIntent(Context context){
-        return (new Intent()).setClass(context, ControlService.class).setAction( START_ACTION );
+        return getStartIntent(context, false);
+    }
+    public static Intent getStartIntent(Context context, boolean serviceMode){
+        return (new Intent())
+                .setClass(context, ControlService.class)
+                .setAction( START_ACTION )
+                .putExtra("serviceMode", serviceMode);
     }
 
     public BotManager getBotManager() {
@@ -68,54 +76,90 @@ public class ControlService extends Service {
         return null;
     }
 
+
+    private void initializeIntents(){
+        locateIntent = PendingIntent.getBroadcast( this, 0,
+                new Intent(LOCATE_ACTION)
+                        .putExtra("sleep", true)
+                        .putExtra("location", (Integer)2)
+                        .putExtra( "network", true ),
+                0
+        );
+        wakeIntent   = PendingIntent.getBroadcast( this, 0,
+                new Intent(WAKE_ACTION)
+                        .putExtra("sleep", true)
+                        .putExtra("location", (Integer)0)
+                        .putExtra( "network", true ),
+                0
+        );
+        alarmIntent  = PendingIntent.getBroadcast( this, 0,
+                new Intent(WAKE_ACTION)
+                        .putExtra("sleep", true)
+                        .putExtra("location", (Integer)2)
+                        .putExtra( "network", false ),
+                0
+        );
+
+        sleepIntent  = PendingIntent.getBroadcast( this, 0, new Intent(SLEEP_ACTION), 0 );
+        powerOffIntent = PendingIntent.getBroadcast( this, 0, new Intent(POWER_OFF), 0 );
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        boolean serviceMode = intent.getBooleanExtra("serviceMode", false);
+        synchronized (this){
+            if( isStarted() ){
+                if( serviceMode!=isServiceMode() ){
+                    stopService();
+                }else {
+                    return START_STICKY;
+                }
+            }
+            started = true;
+        }
+        startService( serviceMode );
+        return START_STICKY;
+    }
+
     @Override
     public void onDestroy() {
         synchronized (this){
-            if( ! mStarted ) return;
-            mStarted = false;
+            if( !isStarted()) return;
+            started = false;
+
+            stopService();
         }
-        Log.i(getClass().getPackage().getName(), "ControlService stopped");
+    }
+
+    private void stopService(){
+        Log.d(getClass().getPackage().getName(), "Stopping ControlService");
 
         unregisterReceiver(actionReceiver);
         actionReceiver.stopLocation(this);
 
-        mBot.finish();
+        mBot.waitFinish();
+
+        Log.i(getClass().getPackage().getName(), "ControlService stopped");
         stopForeground(true);
         getCarState().setStatus("stopped");
     }
 
-    private void startService(){
-        synchronized (this){
-            if( mStarted ) return;
-            mStarted = true;
-        }
+    private void startService(boolean isServiceMode){
+        serviceMode = isServiceMode;
 
-        int versionCode = -1;
+        int versionCode = 0;
         try {
             PackageInfo packInfo = getPackageManager().getPackageInfo( getPackageName(), PackageManager.GET_META_DATA );
             versionCode = packInfo.versionCode;
         } catch (PackageManager.NameNotFoundException e) {
             // ignore;
         }
-
-        locateIntent = PendingIntent.getBroadcast( this, 0,
-                new Intent(LOCATE_ACTION)
-                        .putExtra("sleep", true)
-                        .putExtra("location", (Integer)2),
-                0
-        );
-        wakeIntent   = PendingIntent.getBroadcast( this, 0,
-                new Intent(WAKE_ACTION)
-                        .putExtra("sleep", true)
-                        .putExtra("location", (Integer)0),
-                0
-        );
-        sleepIntent  = PendingIntent.getBroadcast( this, 0, new Intent(SLEEP_ACTION), 0 );
-        powerOffIntent = PendingIntent.getBroadcast( this, 0, new Intent(POWER_OFF), 0 );
-
+        initializeIntents();
         Log.i( getClass().getPackage().getName(), "ControlService started");
 
         this.carState = ((CarMonApp)getApplication()).getCarState();
+        this.carState.setAppVersion( versionCode );
+
         botCommands = new DefaultCommands( this );
 
         mBot = new BotManager(
@@ -126,22 +170,26 @@ public class ControlService extends Service {
 
         IntentFilter filter = new IntentFilter();
 
-        filter.addAction(WAKE_ACTION);
-        filter.addAction(LOCATE_ACTION);
-        filter.addAction(SLEEP_ACTION);
-        filter.addAction(TIMESYNC_ACTION);
-        filter.addAction(POWER_ON);
-        filter.addAction(POWER_OFF);
+        if( !isServiceMode() ) {
+            filter.addAction(WAKE_ACTION);
+            filter.addAction(LOCATE_ACTION);
+            filter.addAction(SLEEP_ACTION);
+            filter.addAction(TIMESYNC_ACTION);
+            filter.addAction(POWER_ON);
+            filter.addAction(POWER_OFF);
 
-        filter.addAction(Intent.ACTION_POWER_CONNECTED);
-        filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
-
-        filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+            filter.addAction(Intent.ACTION_POWER_CONNECTED);
+            filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
+        }
+        filter.addAction( ConnectivityManager.CONNECTIVITY_ACTION );
 
         registerReceiver(actionReceiver, filter);
 
-        actionReceiver.scheduleWake(this, carState.getWakeInterval());
-        actionReceiver.scheduleLocate(this, carState.getNextLocateTime() );
+        if( !isServiceMode() ) {
+            actionReceiver.scheduleWake(this, carState.getNextWakeTime());
+            actionReceiver.scheduleLocate(this, carState.getNextLocateTime());
+            actionReceiver.scheduleAlarm( this, carState.getNextAlarmTime() );
+        }
 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         Notification notify = new Notification(
@@ -155,13 +203,19 @@ public class ControlService extends Service {
         nm.notify(NOTIFY_ID, notify);
         startForeground(NOTIFY_ID, notify);
 
-        sendBroadcast(new Intent(LOCATE_ACTION));
-        mBot.sendEvent("Tracker started");
+        if( !isServiceMode() ) {
+            sendBroadcast(new Intent(LOCATE_ACTION));
+        }else{
+            this.carState.setStatus("service");
+        }
+        mBot.sendEvent( String.format("Tracker started in %s mode", isServiceMode()?"service":"regular") );
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        startService();
-        return START_STICKY;
+    public boolean isServiceMode() {
+        return serviceMode;
+    }
+
+    public boolean isStarted() {
+        return started;
     }
 }

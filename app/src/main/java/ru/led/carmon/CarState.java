@@ -3,18 +3,19 @@ package ru.led.carmon;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.quartz.CronExpression;
 
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Observable;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 public class CarState extends Observable {
@@ -22,6 +23,7 @@ public class CarState extends Observable {
     private Location location, lastLocation;
     private JSONArray track;
 
+    private int appVersion = 0;
     private boolean MqttConnected = false;
     private int queueLength = 0;
     private String status = "stopped";
@@ -30,6 +32,7 @@ public class CarState extends Observable {
     private int satellites;
     private int satellitesUsed;
     private int timeToFirstFix;
+    private float moveDistance = 0;
 
     private boolean fineLocation;
 
@@ -41,91 +44,92 @@ public class CarState extends Observable {
     private boolean batteryNotified;
     private SharedPreferences preferences;
 
-    private ArrayList<Calendar> locateTimes = new ArrayList<Calendar>();
+    private CronExpression locateSchedule, wakeSchedule, alarmSchedule;
 
     public CarState( SharedPreferences preferences ) {
         this.preferences = preferences;
         startNewTrack();
-        setLocateTimes(
-                preferences.getString("locate_times", "07:00 23:00")
+
+        setLocateSchedule(
+                preferences.getString("locate_schedule", "0 0 7,23 * * ?")
+        );
+        setWakeSchedule(
+                preferences.getString("wake_schedule", "0 20 */2 * * ?")
+        );
+        setAlarmSchedule(
+                preferences.getString("detect_schedule", "0 40 */2 * * ?")
         );
     }
 
-    private static Pattern locateTimesPattern = Pattern.compile("[^\\d]*(\\d{2}):(\\d{2})[^\\s]*");
-    private static SimpleDateFormat localTimesFormat = new SimpleDateFormat("HH:mm");
 
-    public void setLocateTimes(String inputString){
-        Matcher m = locateTimesPattern.matcher(inputString);
-
-        ArrayList<Calendar> tmpList = new ArrayList<Calendar>();
-
-        while( m.find() ){
-            Integer hour    = Integer.parseInt( m.group(1) ),
-                    minutes = Integer.parseInt( m.group(2) );
-
-            Calendar c = Calendar.getInstance();
-
-            c.set(Calendar.HOUR_OF_DAY, hour);
-            c.set(Calendar.MINUTE, minutes);
-            c.set(Calendar.SECOND, 0);
-            c.set(Calendar.MILLISECOND, 0);
-
-            tmpList.add(c);
+    private Calendar getNextTime(CronExpression expr){
+        if( expr!=null ){
+            Calendar nextDate = Calendar.getInstance();
+            nextDate.setTime( expr.getNextValidTimeAfter( new Date() ) );
+            return nextDate;
         }
-
-        if( tmpList.size() != 0 || inputString.equals("") ){
-            locateTimes = tmpList;
-        }
-        preferences.edit()
-                .putString("locate_times", locateTimesStr())
-                .apply();
+        return null;
     }
 
-    public ArrayList<Calendar> getLocateTimes() {
-        return locateTimes;
-    }
-
-    public String locateTimesStr(){
-        StringBuilder s = new StringBuilder();
-        for (Calendar c : getLocateTimes()) {
-            s.append( localTimesFormat.format(c.getTime()) ).append(" ");
+    public void setLocateSchedule(String inputString){
+        try {
+            locateSchedule = new CronExpression(inputString);
+            preferences.edit()
+                    .putString("locate_schedule", inputString)
+                    .apply();
+        } catch (ParseException e) {
+            Log.e( getClass().getPackage().getName(), "Error save cron expression", e );
         }
-        return s.toString().trim();
+    }
+    public String getLocateSchedule(){
+        return locateSchedule==null?"":locateSchedule.getCronExpression();
     }
 
     public Calendar getNextLocateTime(){
-        Calendar now = Calendar.getInstance(), minDate = null;
-        for (Calendar c: getLocateTimes() ){
-            while( c.before(now) ){
-                c.add( Calendar.DAY_OF_MONTH, 1);
-            }
-            if( minDate==null || c.before(minDate) ){
-                minDate=c;
-            }
-        }
-        return minDate;
+        return getNextTime(locateSchedule);
     }
-
-    private Calendar wakeTimestamp;
     public Calendar getNextWakeTime(){
-        if( wakeTimestamp == null){
-            return null;
-        }
-
-        Calendar now = Calendar.getInstance();
-        int interval = (int)getWakeInterval();
-        while( wakeTimestamp.before(now) ){
-            wakeTimestamp.add(Calendar.MILLISECOND, interval);
-        }
-        return wakeTimestamp;
+        return getNextTime(wakeSchedule);
+    }
+    public Calendar getNextAlarmTime(){
+        return getNextTime(alarmSchedule);
     }
 
-    public void setFirstWake(long offset){
-        wakeTimestamp = Calendar.getInstance();
-        wakeTimestamp.setTimeInMillis( offset );
+    public String getWakeSchedule() {
+        return wakeSchedule==null?"":wakeSchedule.getCronExpression();
+    }
+    public void setWakeSchedule(String inputString) {
+        try {
+            wakeSchedule = new CronExpression(inputString);
+            preferences.edit()
+                    .putString("wake_schedule", inputString)
+                    .apply();
+        } catch (ParseException e) {
+            Log.e( getClass().getPackage().getName(), "Error save cron expression", e );
+        }
+    }
 
-        setChanged();
-        notifyObservers();
+    public String getAlarmSchedule() {
+        return alarmSchedule ==null?"": alarmSchedule.getCronExpression();
+    }
+
+    public void setAlarmSchedule(String inputString) {
+        try {
+            alarmSchedule = new CronExpression(inputString);
+            preferences.edit()
+                    .putString("detect_schedule", inputString)
+                    .apply();
+        } catch (ParseException e) {
+            Log.e( getClass().getPackage().getName(), "Error save cron expression", e );
+        }
+    }
+
+    public int getAppVersion() {
+        return appVersion;
+    }
+
+    public void setAppVersion(int appVersion) {
+        this.appVersion = appVersion;
     }
 
     public int getSatellites() {
@@ -158,20 +162,6 @@ public class CarState extends Observable {
 
     public void setBatteryTemperature(int batteryTemperature) {
         this.batteryTemperature = batteryTemperature;
-    }
-
-
-    private Long wakeInterval = null;
-    public long getWakeInterval() {
-        if(wakeInterval==null)
-            wakeInterval = preferences.getLong("wake_interval", 60*60*1000 );
-        return wakeInterval;
-    }
-    public void setWakeInterval(long wakeInterval) {
-        this.wakeInterval = wakeInterval;
-        preferences.edit()
-                .putLong("wake_interval", wakeInterval)
-                .apply();
     }
 
     public int getBatteryVoltage() {
@@ -229,26 +219,30 @@ public class CarState extends Observable {
     public JSONObject toJSON() throws JSONException {
         JSONObject message = new JSONObject();
 
+        message.put("_ver", getAppVersion() );
         message.put("batt", getBatteryLevel() );
         message.put("charge", getBatteryPlugged() );
         message.put("temp", getBatteryTemperature()/10.0 );
         message.put("volt", getBatteryVoltage());
+        message.put("tst", (new Date()).getTime()/1000 );
 
         Location loc = getLocation();
-        message.put("_type", "location")
-                .put("acc", loc.getAccuracy())
-                .put("lat", loc.getLatitude())
-                .put("lon", loc.getLongitude())
-                .put("tst", loc.getTime() / 1000)
-                .put("src", loc.getProvider());
+        if( loc!=null ) {
+            message.put("_type", "location")
+                    .put("acc", loc.getAccuracy())
+                    .put("lat", loc.getLatitude())
+                    .put("lon", loc.getLongitude())
+                    .put("tst", loc.getTime() / 1000)
+                    .put("src", loc.getProvider());
 
-        if( loc.getProvider().equals(LocationManager.GPS_PROVIDER) ) {
-            message
-                    .put("vel", loc.getSpeed())
-                    .put("cog", loc.getBearing())
-                    .put("alt", loc.getAltitude())
-                    .put("ttf", getTimeToFirstFix())
-                    .put("sat", String.format("%d/%d", getSatellitesUsed(), getSatellites()));
+            if (loc.getProvider().equals(LocationManager.GPS_PROVIDER)) {
+                message
+                        .put("vel", loc.getSpeed())
+                        .put("cog", loc.getBearing())
+                        .put("alt", loc.getAltitude())
+                        .put("ttf", getTimeToFirstFix())
+                        .put("sat", String.format("%d/%d", getSatellitesUsed(), getSatellites()));
+            }
         }
         return message;
     }
@@ -272,6 +266,16 @@ public class CarState extends Observable {
             // ignore
         }
     }
+    private void replaceLastPoint(){
+        try{
+            if( track.length()>0 ){
+                track.put( track.length()-1, toJSON() );
+            }
+        }catch(JSONException e){
+            // ignore
+        }
+    }
+
     public int getTrackSize(){
         return track.length();
     }
@@ -285,17 +289,26 @@ public class CarState extends Observable {
 
     public void setLocation(Location location) {
         this.location = location;
-
+        if( location==null ){
+            return;
+        }
         // Set fine location flag
         String provider = location.getProvider();
         float minDistance = provider.equals(LocationManager.NETWORK_PROVIDER) ? 600:50;
         fineLocation = (provider.equals(LocationManager.GPS_PROVIDER) || !gpsEnabled) && location.getAccuracy() < minDistance;
 
-        if( isTracking() && fineLocation && (lastLocation==null || location.distanceTo( lastLocation ) >= getTrackDistance()) ){
-            lastLocation = location;
-            addLocationToTrack();
+        if( lastLocation!=null && location!=null ){
+            setMoveDistance( location.distanceTo(lastLocation) );
         }
 
+        if( isTracking() && fineLocation ){
+            if (lastLocation==null || getMoveDistance() >= getTrackDistance()){
+                addLocationToTrack();
+            }else{
+                replaceLastPoint();
+            }
+            lastLocation = location;
+        }
         setChanged();
         notifyObservers();
     }
@@ -313,6 +326,14 @@ public class CarState extends Observable {
             batteryWarning = false;
             batteryNotified = false;
         }
+    }
+
+    public float getMoveDistance() {
+        return moveDistance;
+    }
+
+    public void setMoveDistance(float moveDistance) {
+        this.moveDistance = moveDistance;
     }
 
     public boolean isBatteryWarning() {
@@ -342,11 +363,27 @@ public class CarState extends Observable {
         }
         return trackDistance;
     }
-
     public void setTrackDistance(float trackDistance) {
         this.trackDistance = trackDistance;
         preferences.edit().putFloat("track_distance", trackDistance).apply();
     }
+
+    private Float alertDistance = null;
+    public Float getAlertDistance() {
+        if( alertDistance==null ){
+            alertDistance = preferences.getFloat("alert_distance", (float) 500.0);
+        }
+        return alertDistance;
+    }
+
+    public void setAlertDistance(Float alertDistance) {
+        this.alertDistance = alertDistance;
+        preferences.edit().putFloat("alert_distance", alertDistance).apply();
+    }
+    public boolean isAlertMoving(){
+        return getAlertDistance()!=null && isFineLocation() && getMoveDistance()>=getAlertDistance();
+    }
+
 
     private Boolean tracking = null;
     public boolean isTracking() {
@@ -434,6 +471,5 @@ public class CarState extends Observable {
         setChanged();
         notifyObservers();
     }
-
 
 }

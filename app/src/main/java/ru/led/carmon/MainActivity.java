@@ -8,13 +8,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Observable;
 import java.util.Observer;
 
 public class MainActivity extends Activity implements View.OnClickListener, Observer {
-    private Button btnStart, btnLocate, btnSleep, btnStop, btnConfig;
-    private TextView stateStatus, stateLocate, stateWake, stateConnection, stateBattery, stateLocation, stateQueue;
+    private Button btnStart, btnLocate, btnSleep, btnStop, btnConfig, btnTestPowerOn, btnTestPowerOff;
+    private TextView stateStatus, stateAlarm, stateLocate, stateWake, stateConnection, stateBattery, stateLocation, stateQueue;
     private CarState state;
 
     @Override
@@ -29,10 +30,13 @@ public class MainActivity extends Activity implements View.OnClickListener, Obse
         btnLocate = (Button) findViewById(R.id.btnLocate);
         btnConfig = (Button) findViewById(R.id.btnConfig);
         btnSleep = (Button) findViewById(R.id.btnSleep);
+        btnTestPowerOn = (Button) findViewById(R.id.btnTestPowerOn);
+        btnTestPowerOff = (Button) findViewById(R.id.btnTestPowerOff);
 
         stateStatus = (TextView) findViewById(R.id.stateStatus);
         stateConnection = (TextView) findViewById( R.id.stateConnection);
         stateQueue = (TextView) findViewById( R.id.stateQueue);
+        stateAlarm = (TextView) findViewById( R.id.stateAlarm);
         stateLocate = (TextView) findViewById( R.id.stateLocate);
         stateWake = (TextView) findViewById( R.id.stateWake);
         stateBattery = (TextView) findViewById( R.id.stateBattery);
@@ -43,6 +47,9 @@ public class MainActivity extends Activity implements View.OnClickListener, Obse
         btnLocate.setOnClickListener( this );
         btnConfig.setOnClickListener( this );
         btnSleep.setOnClickListener( this );
+
+        btnTestPowerOn.setOnClickListener( this );
+        btnTestPowerOff.setOnClickListener( this );
 
         updateUI();
         state.addObserver(this);
@@ -71,6 +78,12 @@ public class MainActivity extends Activity implements View.OnClickListener, Obse
                     new Intent(ControlService.SLEEP_ACTION)
             );
         }
+        if( view == btnTestPowerOn ){
+            sendBroadcast( new Intent(ControlService.POWER_ON));
+        }
+        if( view == btnTestPowerOff ){
+            sendBroadcast( new Intent(ControlService.POWER_OFF));
+        }
     }
 
     @Override
@@ -95,16 +108,22 @@ public class MainActivity extends Activity implements View.OnClickListener, Obse
         stateStatus.setText(
                 String.format("Status: %s", state.getStatus())
         );
+        stateAlarm.setText( String.format("Alarm: %s",
+                state.getNextAlarmTime() != null ?
+                        CarState.dateFormat.format(state.getNextAlarmTime().getTime()) : "off"
+                )
+        );
         stateWake.setText( String.format("Wake: %s",
                 state.getNextWakeTime() != null ?
-                        CarState.dateFormat.format(state.getNextWakeTime().getTime()) : "n/a"
+                        CarState.dateFormat.format(state.getNextWakeTime().getTime()) : "off"
                 )
         );
         stateLocate.setText(
-                String.format("Locate: %s",
-                        CarState.dateFormat.format(state.getNextLocateTime().getTime())
-                )
+                    String.format("Locate: %s",
+                            state.getNextLocateTime() !=null ? CarState.dateFormat.format(state.getNextLocateTime().getTime()): "off"
+                    )
         );
+
         stateConnection.setText( String.format("Connected: %b", state.isMqttConnected() ) );
         stateQueue.setText(String.format("Queue: %d Track: %s", state.getQueueLength(), state.getTrackSize() ));
         stateBattery.setText(
