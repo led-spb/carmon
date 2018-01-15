@@ -13,7 +13,6 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -23,7 +22,6 @@ import android.util.Log;
 
 import org.apache.commons.net.ntp.NTPUDPClient;
 import org.apache.commons.net.ntp.TimeInfo;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -32,6 +30,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.zip.GZIPOutputStream;
 
 
@@ -103,7 +102,7 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
             if( ni.isConnected() ){
                 mService.getBotManager().start();
 
-                if( System.currentTimeMillis()-lastTimeSynced >= 7*24*60*60*1000 ) {
+                if( mService.getCarState().isTimeSync() && System.currentTimeMillis()-lastTimeSynced >= 7*24*60*60*1000 ) {
                     beginTimeSync(context, true);
                 }
             }else if( intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false) ) {
@@ -279,19 +278,25 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                                     state.addLocationToTrack();
 
                                     JSONObject track = new JSONObject();
+                                    track.put("_type", "track");
+                                    track.put("_ver", state.getVersionCode() );
                                     track.put("track", state.getCurrentTrack() );
+                                    track.put("tst", (new Date()).getTime()/1000 );
 
-                                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                                    GZIPOutputStream os = new GZIPOutputStream(bos);
-                                    os.write( track.toString().getBytes() );
-                                    os.finish();
+                                    Object trackPayload = track;
+                                    if( state.isUseCompress() ) {
+                                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                                        GZIPOutputStream os = new GZIPOutputStream(bos);
+                                        os.write(track.toString().getBytes());
+                                        os.finish();
+                                        trackPayload = bos.toByteArray();
+                                    }
 
-                                    mService.getBotManager().sendObject(
-                                            BotManager.TOPIC_TRACK, false, bos.toByteArray() //track
-                                    );
+                                    mService.getBotManager().sendEvent(false, trackPayload  );
+
                                     state.startNewTrack();
                                 } catch (Exception e) {
-                                    // ignore
+                                    Log.e(getClass().getPackage().getName(), "Error while sending track", e );
                                 }
                             }
                         }

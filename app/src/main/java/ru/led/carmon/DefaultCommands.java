@@ -2,19 +2,17 @@ package ru.led.carmon;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.Date;
 
@@ -65,7 +63,6 @@ public class DefaultCommands extends BotCommands {
     }
 
     public JSONObject execExec(final String... args) throws JSONException {
-
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -98,58 +95,25 @@ public class DefaultCommands extends BotCommands {
         return null;
     }
 
+    public JSONObject execSettings(String... args) throws JSONException {
+        SharedPreferences prefs = getService().getCarState().getPreferences();
+
+        JSONObject result = new JSONObject( prefs.getAll() );
+
+
+        JSONObject payload = new JSONObject();
+        payload.put("_type", "settings");
+        payload.put("_ver", getService().getCarState().getVersionCode() );
+        payload.put("data", result);
+        payload.put("tst", (new Date()).getTime()/1000 );
+
+        getManager().sendEvent(false, payload );
+        return null;
+    }
+
     public JSONObject execService(String... args) throws JSONException {
         getService().startService( ControlService.getStartIntent(getService(), true) );
         return null;
     }
 
-    private File download(String url) throws Exception {
-        URL u = new URL(url);
-        HttpURLConnection conn = (HttpURLConnection) u.openConnection();
-        conn.connect();
-
-        if( conn.getResponseCode() != HttpURLConnection.HTTP_OK ){
-            throw new Exception(String.format("Response code :%d %s", conn.getResponseCode(), conn.getResponseMessage()) );
-        }
-
-
-        InputStream is = u.openStream();
-        OutputStream os = getService().openFileOutput("update.apk", Context.MODE_WORLD_READABLE);
-        try {
-            byte[] buffer = new byte[8192];
-            int rx;
-            while ((rx = is.read(buffer)) != -1) {
-                os.write(buffer, 0, rx);
-            }
-        }finally {
-            if (is != null) is.close();
-            if (os != null) os.close();
-        }
-        return getService().getFileStreamPath("update.apk");
-    }
-
-    public JSONObject execUpdate(final String... args) throws JSONException {
-        if( args.length<=0 ){
-            getManager().sendEvent("Wrong command");
-        }
-
-        final String url = args[0];
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-
-                getManager().sendEvent( String.format("Begin update from %s", url) );
-                try {
-                    File f = download(url);
-
-                } catch (Exception e) {
-                    Log.e(getClass().getPackage().getName(), "Error while downloading update", e);
-                    getManager().sendEvent( e.toString() );
-                }
-            }
-        }).start();
-
-        return null;
-    }
 }

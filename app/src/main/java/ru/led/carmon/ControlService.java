@@ -158,7 +158,7 @@ public class ControlService extends Service {
         Log.i( getClass().getPackage().getName(), "ControlService started");
 
         this.carState = ((CarMonApp)getApplication()).getCarState();
-        this.carState.setAppVersion( versionCode );
+        this.carState.setVersionCode( versionCode );
 
         botCommands = new DefaultCommands( this );
 

@@ -22,9 +22,9 @@ import java.util.Properties;
 public class BotManager extends Observable implements MqttCallback {
     public static String TOPIC_ROOT = "owntracks/";
     public static String TOPIC_STATE = TOPIC_ROOT+"%s/%s";
-    public static String TOPIC_WILL = TOPIC_ROOT+"%s/%s/msg";
-    public static String TOPIC_EVENT = TOPIC_ROOT+"%s/%s/msg";
-    public static String TOPIC_TRACK = TOPIC_ROOT+"%s/%s/track";
+    //public static String TOPIC_WILL = TOPIC_ROOT+"%s/%s/msg";
+    //public static String TOPIC_EVENT = TOPIC_ROOT+"%s/%s/msg";
+    //public static String TOPIC_TRACK = TOPIC_ROOT+"%s/%s/track";
     public static String TOPIC_CMD = TOPIC_ROOT+"%s/%s/cmd";
     public static String TRACKER_ID = "tracker";
 
@@ -241,65 +241,42 @@ public class BotManager extends Observable implements MqttCallback {
         }
     }
 
-    private void sendMessage(JSONObject message){
+    private void queueMessage(JSONObject message){
         synchronized (mResponseQueue){
             mResponseQueue.add( message );
             carState.setQueueLength(mResponseQueue.size());
         }
-        /*
-        try {
-            String topic = message.optString("topic", "");
-            boolean retain = message.optBoolean("retain", false);
-            int qos = message.optInt("qos", 1);
-            JSONObject payload = message.getJSONObject("payload");
-
-            mqttClient.publish( topic, payload.toString().getBytes(), qos, retain );
-        } catch (JSONException e) {
-            Log.e(getClass().getPackage().getName(), "Malformed JSON message", e);
-        } catch (Exception e) {
-            Log.e(getClass().getPackage().getName(), "Fail to delivery MQTT message", e);
-        }*/
     }
 
-    public void sendObject(String format, boolean retain, Object payload){
+    public void sendEvent(boolean retain, Object payload){
         JSONObject msg = new JSONObject();
         try {
-            msg.put("topic", String.format( format, carState.getMqttClientId(), TRACKER_ID));
+            msg.put("topic", String.format( TOPIC_STATE, carState.getMqttClientId(), TRACKER_ID));
             msg.put("retain", retain);
-            msg.put("payload", payload);
-            sendMessage(msg);
+
+            if( payload instanceof String){
+                JSONObject json = new JSONObject();
+                json.put("_type", "msg");
+                json.put("_ver", carState.getVersionCode() );
+                json.put("text", (String) payload );
+                json.put("tst", (new Date()).getTime()/1000 );
+
+                msg.put( "payload", json );
+            }else {
+                msg.put("payload", payload);
+            }
+            queueMessage(msg);
         }catch (JSONException e){
             // ignore
         }
     }
 
-    public void sendEvent(String text){
-        JSONObject msg = new JSONObject();
-        try {
-            JSONObject payload = new JSONObject();
-            payload.put("_type", "msg");
-            payload.put("text", text);
-            payload.put("tst", (new Date()).getTime()/1000 );
-
-            msg.put("topic", String.format(TOPIC_EVENT, carState.getMqttClientId(), TRACKER_ID) );
-            msg.put("payload", payload);
-            sendMessage(msg);
-        } catch (JSONException e) {
-            // ignore
-        }
+    public void sendEvent(String message){
+        sendEvent(false, message);
     }
 
     public void sendStatus(JSONObject status){
-        JSONObject msg = new JSONObject();
-        try {
-            msg.put("topic", String.format(TOPIC_STATE, carState.getMqttClientId(), TRACKER_ID));
-            msg.put("retain", true );
-            msg.put("payload", status);
-
-            sendMessage(msg);
-        } catch (JSONException e) {
-            // ignore
-        }
+        sendEvent(true, status);
     }
 
     @Override
@@ -323,7 +300,7 @@ public class BotManager extends Observable implements MqttCallback {
                 args.toArray( new String[args.size()] )
         );/*
         if( result!=null ){
-            sendMessage( result );
+            queueMessage( result );
         }*/
     }
 

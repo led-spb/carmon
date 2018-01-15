@@ -38,7 +38,6 @@
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
             android:layout_below="@+id/editMqttURL"
-            android:password="false"
             android:text="@string/mqtt_username"
             android:textAppearance="?android:attr/textAppearanceMedium" />
 
@@ -88,7 +87,7 @@
             android:layout_below="@+id/labelMqttClientId" />
 
         <TextView
-            android:id="@+id/labelViewAlertInterval"
+            android:id="@+id/labelAlarmSchedule"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
@@ -97,66 +96,66 @@
             android:textAppearance="?android:attr/textAppearanceMedium" />
 
         <EditText
-            android:id="@+id/editAlertInterval"
+            android:id="@+id/editAlarmSchedule"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/labelViewAlertInterval"
+            android:layout_below="@+id/labelAlarmSchedule"
             android:numeric="integer" />
 
         <TextView
-            android:id="@+id/labelViewWakeInterval"
+            android:id="@+id/labelViewWakeSchedule"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:layout_below="@+id/editAlertInterval"
+            android:layout_below="@+id/editAlarmSchedule"
             android:text="@string/wake_schedule"
             android:textAppearance="?android:attr/textAppearanceMedium" />
 
         <EditText
-            android:id="@+id/editWakeInterval"
+            android:id="@+id/editWakeSchedule"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/labelViewWakeInterval" />
+            android:layout_below="@+id/labelViewWakeSchedule" />
 
         <TextView
-            android:id="@+id/labelLocateTimes"
+            android:id="@+id/labelLocateSchedule"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/editWakeInterval"
+            android:layout_below="@+id/editWakeSchedule"
             android:text="@string/locate_schedule"
             android:textAppearance="?android:attr/textAppearanceMedium" />
 
         <EditText
-            android:id="@+id/editLocateTimes"
+            android:id="@+id/editLocateSchedule"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/labelLocateTimes" />
+            android:layout_below="@+id/labelLocateSchedule" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/idle_timeout"
-        android:id="@+id/labelIdleTimeout"
-        android:layout_below="@+id/editLocateTimes"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true" />
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/editIdleTimeout"
-        android:layout_below="@+id/labelIdleTimeout"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true"
-        android:inputType="numberDecimal" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="@string/idle_timeout"
+            android:id="@+id/labelIdleTimeout"
+            android:layout_below="@+id/editLocateSchedule"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true" />
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/editIdleTimeout"
+            android:layout_below="@+id/labelIdleTimeout"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:inputType="numberDecimal" />
 
         <TextView
             android:id="@+id/labelGpsTimeout"
@@ -176,13 +175,68 @@
             android:layout_alignParentRight="true"
             android:layout_below="@+id/labelGpsTimeout" />
 
+
+        <TextView
+            android:id="@+id/labelTrackDistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editGpsTimeout"
+            android:text="@string/track_distance"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <EditText
+            android:id="@+id/editTrackDistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelTrackDistance" />
+
+        <TextView
+            android:id="@+id/labelAlarmDistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editTrackDistance"
+            android:text="@string/alert_distance"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <EditText
+            android:id="@+id/editAlarmDistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/labelAlarmDistance" />
+
+        <CheckBox
+            android:id="@+id/checkTracking"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/editAlarmDistance"
+            android:text="@string/use_tracking" />
+
+        <CheckBox
+            android:id="@+id/checkUseCompress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/checkTracking"
+            android:text="@string/use_compress" />
+
         <CheckBox
             android:id="@+id/checkBoxTimesync"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/editGpsTimeout"
+            android:layout_below="@+id/checkUseCompress"
             android:text="@string/use_ntp" />
 
         <Button

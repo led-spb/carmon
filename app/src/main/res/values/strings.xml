@@ -23,5 +23,9 @@
     <string name="btnStart">Start</string>
     <string name="btnStop">Stop</string>
     <string name="btnConfig">Config</string>
+    <string name="track_distance">Track distance</string>
+    <string name="alert_distance">Alert move distance</string>
+    <string name="use_compress">GZIP track data</string>
+    <string name="use_tracking">Send track data</string>
 
 </resources>

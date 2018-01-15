@@ -20,7 +20,12 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
 
     private EditText editIdleTimeout;
     private EditText editGpsTimeout;
+    private EditText editTrackDistance;
+    private EditText editAlarmDistance;
+
     private CheckBox editTimesync;
+    private CheckBox editUseGzip;
+    private CheckBox editTracking;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,18 +40,32 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
         editPassword = (EditText) findViewById(R.id.editMqttPassword);
         editClientId = (EditText) findViewById(R.id.editMqttClientId);
         editTimesync = (CheckBox) findViewById(R.id.checkBoxTimesync);
-        editWakeSchedule = (EditText) findViewById(R.id.editWakeInterval);
+        editUseGzip  = (CheckBox) findViewById(R.id.checkUseCompress);
+        editTracking = (CheckBox) findViewById(R.id.checkTracking);
+
         editIdleTimeout = (EditText) findViewById(R.id.editIdleTimeout);
-        editLocateSchedule = (EditText) findViewById(R.id.editLocateTimes);
-        editAlarmSchedule = (EditText) findViewById(R.id.editAlertInterval);
         editGpsTimeout = (EditText) findViewById(R.id.editGpsTimeout);
 
+        editWakeSchedule = (EditText) findViewById(R.id.editWakeSchedule);
+        editLocateSchedule = (EditText) findViewById(R.id.editLocateSchedule);
+        editAlarmSchedule = (EditText) findViewById(R.id.editAlarmSchedule);
+
+        editTrackDistance = (EditText) findViewById(R.id.editTrackDistance);
+        editAlarmDistance = (EditText) findViewById(R.id.editAlarmDistance);
+
+
+
+
+
+        // set
         editUrl.setText( state.getMqttUrl() );
         editUsername.setText( state.getMqttUsername() );
         editPassword.setText( state.getMqttPassword() );
         editClientId.setText( state.getMqttClientId() );
 
         editTimesync.setChecked(state.isTimeSync());
+        editUseGzip.setChecked(state.isUseCompress());
+        editTracking.setChecked(state.isTracking());
 
         editIdleTimeout.setText(  String.format("%d", state.getIdleTimeout() / 1000 / 60) );
         editGpsTimeout.setText( String.format("%d", state.getGpsTimeout() / 1000 / 60 ) );
@@ -54,6 +73,9 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
         editAlarmSchedule.setText( state.getAlarmSchedule() );
         editWakeSchedule.setText( state.getWakeSchedule() );
         editLocateSchedule.setText(  state.getLocateSchedule() );
+
+        editTrackDistance.setText( String.format("%d", (int)state.getTrackDistance()) );
+        editAlarmDistance.setText( String.format("%d", (int)state.getAlarmDistance() ) );
 
         Button btn = (Button) findViewById(R.id.btnSave);
         btn.setOnClickListener(this);
@@ -67,7 +89,10 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
         state.setMqttUsername(editUsername.getText().toString());
         state.setMqttPassword(editPassword.getText().toString());
         state.setMqttClientId(editClientId.getText().toString());
+
         state.setTimeSync(editTimesync.isChecked());
+        state.setGpsEnabled( editUseGzip.isChecked() );
+        state.setTracking( editTracking.isChecked() );
 
         state.setLocateSchedule(editLocateSchedule.getText().toString());
         state.setWakeSchedule( editWakeSchedule.getText().toString() );
@@ -75,6 +100,9 @@ public class ConfigActivity extends Activity implements View.OnClickListener {
 
         state.setIdleTimeout(Long.parseLong(editIdleTimeout.getText().toString()) * 1000 * 60 );
         state.setGpsTimeout(Long.parseLong(editGpsTimeout.getText().toString()) *1000 * 60 );
+
+        state.setAlarmDistance( Float.parseFloat(editAlarmDistance.getText().toString()) );
+        state.setTrackDistance( Float.parseFloat(editTrackDistance.getText().toString()) );
 
         finish();
     }

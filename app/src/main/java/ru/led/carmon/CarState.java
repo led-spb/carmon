@@ -23,7 +23,6 @@ public class CarState extends Observable {
     private Location location, lastLocation;
     private JSONArray track;
 
-    private int appVersion = 0;
     private boolean MqttConnected = false;
     private int queueLength = 0;
     private String status = "stopped";
@@ -43,6 +42,7 @@ public class CarState extends Observable {
     private boolean batteryWarning;
     private boolean batteryNotified;
     private SharedPreferences preferences;
+    private int versionCode;
 
     private CronExpression locateSchedule, wakeSchedule, alarmSchedule;
 
@@ -62,6 +62,10 @@ public class CarState extends Observable {
     }
 
 
+    public SharedPreferences getPreferences(){
+        return preferences;
+    }
+
     private Calendar getNextTime(CronExpression expr){
         if( expr!=null ){
             Calendar nextDate = Calendar.getInstance();
@@ -69,6 +73,14 @@ public class CarState extends Observable {
             return nextDate;
         }
         return null;
+    }
+
+    public int getVersionCode() {
+        return versionCode;
+    }
+
+    public void setVersionCode(int versionCode) {
+        this.versionCode = versionCode;
     }
 
     public void setLocateSchedule(String inputString){
@@ -122,14 +134,6 @@ public class CarState extends Observable {
         } catch (ParseException e) {
             Log.e( getClass().getPackage().getName(), "Error save cron expression", e );
         }
-    }
-
-    public int getAppVersion() {
-        return appVersion;
-    }
-
-    public void setAppVersion(int appVersion) {
-        this.appVersion = appVersion;
     }
 
     public int getSatellites() {
@@ -216,19 +220,25 @@ public class CarState extends Observable {
         preferences.edit().putLong("poweroff_timeout", poweroffTimeout).apply();
     }
 
-    public JSONObject toJSON() throws JSONException {
+    public JSONObject toJSON() throws JSONException{
+        return toJSON(false);
+    }
+
+    public JSONObject toJSON(boolean less) throws JSONException {
         JSONObject message = new JSONObject();
 
-        message.put("_ver", getAppVersion() );
-        message.put("batt", getBatteryLevel() );
-        message.put("charge", getBatteryPlugged() );
-        message.put("temp", getBatteryTemperature()/10.0 );
-        message.put("volt", getBatteryVoltage());
-        message.put("tst", (new Date()).getTime()/1000 );
+        if(!less) {
+            message.put("_type", "location");
+            message.put("_ver", getVersionCode() );
+            message.put("batt", getBatteryLevel());
+            message.put("charge", getBatteryPlugged());
+            message.put("temp", getBatteryTemperature() / 10.0);
+            message.put("volt", getBatteryVoltage());
+        }
 
         Location loc = getLocation();
         if( loc!=null ) {
-            message.put("_type", "location")
+            message
                     .put("acc", loc.getAccuracy())
                     .put("lat", loc.getLatitude())
                     .put("lon", loc.getLongitude())
@@ -238,10 +248,14 @@ public class CarState extends Observable {
             if (loc.getProvider().equals(LocationManager.GPS_PROVIDER)) {
                 message
                         .put("vel", loc.getSpeed())
-                        .put("cog", loc.getBearing())
-                        .put("alt", loc.getAltitude())
-                        .put("ttf", getTimeToFirstFix())
-                        .put("sat", String.format("%d/%d", getSatellitesUsed(), getSatellites()));
+                        .put("alt", loc.getAltitude());
+
+                if(!less) {
+                    message
+                            .put("cog", loc.getBearing())
+                            .put("ttf", getTimeToFirstFix())
+                            .put("sat", String.format("%d/%d", getSatellitesUsed(), getSatellites()));
+                }
             }
         }
         return message;
@@ -261,7 +275,7 @@ public class CarState extends Observable {
 
     public void addLocationToTrack() {
         try {
-            track.put(toJSON());
+            track.put(toJSON(true));
         }catch(JSONException e){
             // ignore
         }
@@ -269,7 +283,7 @@ public class CarState extends Observable {
     private void replaceLastPoint(){
         try{
             if( track.length()>0 ){
-                track.put( track.length()-1, toJSON() );
+                track.put( track.length()-1, toJSON(true) );
             }
         }catch(JSONException e){
             // ignore
@@ -359,7 +373,7 @@ public class CarState extends Observable {
     private Float trackDistance = null;
     public float getTrackDistance() {
         if( trackDistance==null){
-            trackDistance = preferences.getFloat("track_distance", (float) 500.0);
+            trackDistance = preferences.getFloat("track_distance", (float) 200.0);
         }
         return trackDistance;
     }
@@ -368,20 +382,20 @@ public class CarState extends Observable {
         preferences.edit().putFloat("track_distance", trackDistance).apply();
     }
 
-    private Float alertDistance = null;
-    public Float getAlertDistance() {
-        if( alertDistance==null ){
-            alertDistance = preferences.getFloat("alert_distance", (float) 500.0);
+    private Float alarmDistance = null;
+    public float getAlarmDistance() {
+        if( alarmDistance ==null ){
+            alarmDistance = preferences.getFloat("alert_distance", (float) 500.0);
         }
-        return alertDistance;
+        return alarmDistance;
     }
 
-    public void setAlertDistance(Float alertDistance) {
-        this.alertDistance = alertDistance;
-        preferences.edit().putFloat("alert_distance", alertDistance).apply();
+    public void setAlarmDistance(Float alarmDistance) {
+        this.alarmDistance = alarmDistance;
+        preferences.edit().putFloat("alert_distance", alarmDistance).apply();
     }
     public boolean isAlertMoving(){
-        return getAlertDistance()!=null && isFineLocation() && getMoveDistance()>=getAlertDistance();
+        return isFineLocation() && getMoveDistance()>= getAlarmDistance();
     }
 
 
@@ -394,7 +408,20 @@ public class CarState extends Observable {
     }
     public void setTracking(boolean tracking) {
         this.tracking = tracking;
-        preferences.edit().putBoolean("tracking", tracking);
+        preferences.edit().putBoolean("tracking", tracking).apply();
+    }
+
+    private Boolean useCompress;
+    public boolean isUseCompress() {
+        if( useCompress==null ){
+            useCompress = preferences.getBoolean("comress", true);
+        }
+        return useCompress;
+    }
+
+    public void setUseCompress(boolean useCompress) {
+        this.useCompress = useCompress;
+        preferences.edit().putBoolean("comress", useCompress).apply();
     }
 
     private Boolean timeSync = null;
