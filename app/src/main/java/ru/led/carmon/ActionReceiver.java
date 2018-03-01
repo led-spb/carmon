@@ -399,7 +399,8 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
         );
         lm.requestLocationUpdates( LocationManager.NETWORK_PROVIDER, fast?5000:60*1000, fast?0:500, this );
         if( useGps ) {
-            lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, fast?5000:60*1000, fast?0:500, this );
+            //lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, fast?5000:60*1000, fast?0:500, this );
+            lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, 5000, 0, this );
         }
         lm.addGpsStatusListener(this);
     }
@@ -413,7 +414,7 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.i( getClass().getPackage().getName(), location.toString() );
+        Log.d( getClass().getPackage().getName(), location.toString() );
 
         CarState state = mService.getCarState();
         synchronized (state) {

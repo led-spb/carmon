@@ -26,6 +26,13 @@
         <intent-filter>
             <action android:name="ru.led.updater.UPDATE"></action>
         </intent-filter>
+<!--
+        <intent-filter>
+            <action android:name="android.intent.action.PACKAGE_REPLACED" />
+            <data
+                android:path="ru.led.updater"
+                android:scheme="package" />
+        </intent-filter> -->
     </receiver>
 
 </application>

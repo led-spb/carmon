@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -38,7 +40,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 
 public class UpdateService extends Service {
-    public static String UPDATE_ACTION = "ru.led.updater.UPDATE";
+    private static String UPDATE_ACTION = "ru.led.updater.UPDATE";
 
     private PendingIntent updateIntent;
     private CronExpression updateExpression = null;
@@ -101,6 +103,21 @@ public class UpdateService extends Service {
         updateThread.start();
     }
 
+    private void waitForNetwork(long timeout) throws Exception{
+        ConnectivityManager cm =
+                (ConnectivityManager)this.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        long started = System.currentTimeMillis();
+        while( System.currentTimeMillis()-started< timeout ) {
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            if( activeNetwork!=null && activeNetwork.isConnected() ){
+                return;
+            }
+            Thread.sleep(1000 );
+        }
+        throw new Exception( String.format("Network is not available for %d ms",timeout) );
+    }
+
 
 
     private OutputStream readStream(InputStream input, OutputStream output) throws IOException {
@@ -134,7 +151,7 @@ public class UpdateService extends Service {
         startActivity(intent);
 */
         ProcessBuilder builder = new ProcessBuilder(
-                "su", "-c", String.format("pm install -r %s",  downloaded.getAbsolutePath())
+                "su", "-c", String.format("pm install -t -r %s",  downloaded.getAbsolutePath())
         ).redirectErrorStream(true);
         Thread.sleep(1000);
 
@@ -160,9 +177,14 @@ public class UpdateService extends Service {
     private Runnable updateRunnable = new Runnable() {
         @Override
         public void run() {
-            Log.d( getClass().getPackage().getName(), "Update check started");
+            Log.i( getClass().getPackage().getName(), "Update check started");
             try {
-                Thread.sleep(7000);
+                // wait for network state is active
+
+                //Thread.sleep(7000);
+                Log.i( getClass().getPackage().getName(), "Waiting for network available");
+                waitForNetwork(30000 );
+                Log.i( getClass().getPackage().getName(), "Network is available, loading updates");
 
                 URL url = new URL("https://led-spb.no-ip.org/.updates/update.json");
                 HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
@@ -180,18 +202,21 @@ public class UpdateService extends Service {
                     try {
                         try {
                             PackageInfo info = pm.getPackageInfo(app_name, 0);
-                            if (info.versionCode < update_info.getInt("version")) {
-                                Log.i(getClass().getPackage().getName(), String.format("Applciation %s is need to update", app_name));
+                            int targetVersion = update_info.optInt("version", 0);
+
+                            Log.d( getClass().getPackage().getName(), String.format("Application %s has version %d, target version is %d", app_name, info.versionCode, targetVersion) );
+                            if (info.versionCode < targetVersion || update_info.optBoolean("force", false) ) {
+                                Log.i(getClass().getPackage().getName(), String.format("Application %s is need to update", app_name));
 
                                 updateApplication(app_name, update_info.getString("path"));
                             } else {
-                                Log.i(getClass().getPackage().getName(), String.format("Applciation %s is up-date", app_name));
+                                Log.i(getClass().getPackage().getName(), String.format("Application %s is up-date", app_name));
                             }
                         } catch (PackageManager.NameNotFoundException e) {
                             if( update_info.optBoolean("force", false) ){
                                 updateApplication(app_name, update_info.getString("path"));
                             }else {
-                                Log.w(getClass().getPackage().getName(), String.format("Applciation %s is not installed", app_name));
+                                Log.w(getClass().getPackage().getName(), String.format("Application %s is not installed", app_name));
                             }
                         }
                     }catch(Exception e){

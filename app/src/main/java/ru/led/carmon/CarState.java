@@ -316,7 +316,9 @@ public class CarState extends Observable {
         }
 
         if( isTracking() && fineLocation ){
-            if (lastLocation==null || getMoveDistance() >= getTrackDistance()){
+            if (lastLocation==null
+                    || getMoveDistance() >= getTrackDistance()
+                    /*|| Math.abs(location.getTime()-lastLocation.getTime())> getTrackTime()*/ ){
                 addLocationToTrack();
             }else{
                 replaceLastPoint();
@@ -414,14 +416,14 @@ public class CarState extends Observable {
     private Boolean useCompress;
     public boolean isUseCompress() {
         if( useCompress==null ){
-            useCompress = preferences.getBoolean("comress", true);
+            useCompress = preferences.getBoolean("compress", true);
         }
         return useCompress;
     }
 
     public void setUseCompress(boolean useCompress) {
         this.useCompress = useCompress;
-        preferences.edit().putBoolean("comress", useCompress).apply();
+        preferences.edit().putBoolean("compress", useCompress).apply();
     }
 
     private Boolean timeSync = null;
