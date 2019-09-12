@@ -131,8 +131,7 @@ public class UpdateService extends Service {
     }
 
     private void updateApplication(String package_name, String url) throws Exception{
-        File downloaded = new File("/sdcard/"+package_name+".apk");
-                //new File( getCacheDir(), package_name+".apk" );
+        File downloaded = new File("/sdcard/"+package_name+".apk" );
         Log.i( getClass().getPackage().getName(), String.format("Downloading to %s", downloaded.getAbsolutePath()) );
 
         HttpURLConnection conn = (HttpURLConnection) (new URL(url)).openConnection();
@@ -143,13 +142,6 @@ public class UpdateService extends Service {
         writer.close();
 
         Log.i(getClass().getPackage().getName(), "Downloaded ok");
-/*
-        Intent intent = new Intent(Intent.ACTION_VIEW).setDataAndType(
-                Uri.fromFile(downloaded), "application/vnd.android.package-archive"
-        ).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        startActivity(intent);
-*/
         ProcessBuilder builder = new ProcessBuilder(
                 "su", "-c", String.format("pm install -t -r %s",  downloaded.getAbsolutePath())
         ).redirectErrorStream(true);

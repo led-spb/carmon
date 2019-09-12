@@ -136,7 +136,7 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                 Log.i( getClass().getPackage().getName(), "Wakelock begin");
             }
         }
-
+        Log.i( getClass().getPackage().getName(), String.format("Wake action. network:%b location:%d sleep:%b", network, locationProvider, needSleep) );
         final CarState state = mService.getCarState();
 
         unScheduleSleep(context);

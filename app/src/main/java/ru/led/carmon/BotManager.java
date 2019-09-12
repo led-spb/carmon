@@ -243,7 +243,17 @@ public class BotManager extends Observable implements MqttCallback {
 
     private void queueMessage(JSONObject message){
         synchronized (mResponseQueue){
+            String topic = message.optString("topic", "");
+            Object payload = message.opt("payload");
+            String text = "[binary]";
+
+            if( payload instanceof JSONObject ) {
+                // JSONObject payload = message.getJSONObject("payload")
+                text = ((JSONObject)payload).toString();
+            }
+            Log.i( getClass().getPackage().getName(), String.format("MQTT message to %s: %s", topic, text) );
             mResponseQueue.add( message );
+
             carState.setQueueLength(mResponseQueue.size());
         }
     }
