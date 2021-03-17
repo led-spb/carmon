@@ -20,18 +20,14 @@ import java.util.Observable;
 import java.util.Properties;
 
 public class BotManager extends Observable implements MqttCallback {
-    public static String TOPIC_ROOT = "owntracks/";
-    public static String TOPIC_STATE = TOPIC_ROOT+"%s/%s";
-    //public static String TOPIC_WILL = TOPIC_ROOT+"%s/%s/msg";
-    //public static String TOPIC_EVENT = TOPIC_ROOT+"%s/%s/msg";
-    //public static String TOPIC_TRACK = TOPIC_ROOT+"%s/%s/track";
-    public static String TOPIC_CMD = TOPIC_ROOT+"%s/%s/cmd";
-    public static String TRACKER_ID = "tracker";
+    private static String TOPIC_ROOT = "owntracks/";
+    private static String TOPIC_STATE = TOPIC_ROOT+"%s/%s";
+    private static String TOPIC_CMD = TOPIC_ROOT+"%s/%s/cmd";
+    private static String TRACKER_ID = "tracker";
 
     private CarState carState;
 
     private MqttDefaultFilePersistence dataStore;
-    //private MqttAsyncClient mqttClient;
     private MqttClient mqttClient;
 
     private boolean mStopRequest = false;
@@ -42,7 +38,7 @@ public class BotManager extends Observable implements MqttCallback {
     private Thread botThread;
 
 
-    private /*IMqttToken*/ void connectMqtt() throws Exception {
+    private void connectMqtt() throws Exception {
         MqttConnectOptions options = new MqttConnectOptions();
 
         Properties ssl = new Properties();
@@ -55,14 +51,8 @@ public class BotManager extends Observable implements MqttCallback {
         if( !carState.getMqttPassword().equals("") ) {
             options.setPassword( carState.getMqttPassword().toCharArray() );
         }
-        /*
-        String lwt = String.format( "{\"type\":\"msg\",\"tst\":%d,\"text\":\"\"}" );
-        options.setWill(
-                String.format(TOPIC_WILL, carState.getMqttClientId(), TRACKER_ID),
-                lwt.getBytes(), 1, false
-        );*/
+        createMQTTClient();
         mqttClient.connect(options);
-        //return mqttClient.connect(options);
     }
 
     private void closeMqttConnection(){
@@ -71,7 +61,6 @@ public class BotManager extends Observable implements MqttCallback {
                 if( mqttClient.isConnected() )
                     mqttClient.disconnect();
                 mqttClient.close();
-                //dataStore.close();
             } catch (MqttException e) {
                 Log.e(getClass().getPackage().getName(), "Close MQTT connection", e);
             }
@@ -107,7 +96,6 @@ public class BotManager extends Observable implements MqttCallback {
 
                     try {
                         Log.i(getClass().getPackage().getName(), "Start MQTT message loop");
-                        // connectMqtt().waitForCompletion();
                         connectMqtt();
                         Log.i(getClass().getPackage().getName(), String.format("Connected to MQTT broker %s", carState.getMqttUrl()));
 
@@ -142,7 +130,7 @@ public class BotManager extends Observable implements MqttCallback {
                                         if( payload instanceof byte[]){
                                             data = (byte[]) payload;
                                         }
-                                        mqttClient.publish( topic, data/*payload.toString().getBytes()*/, qos, retain );
+                                        mqttClient.publish( topic, data, qos, retain );
                                     } catch (JSONException e) {
                                         Log.e(getClass().getPackage().getName(), "Malformed JSON message", e);
                                     }
@@ -193,24 +181,24 @@ public class BotManager extends Observable implements MqttCallback {
             dataStore = new MqttDefaultFilePersistence(
                     context.getCacheDir().getAbsolutePath()
             );
-            //mqttClient = new MqttAsyncClient( carState.getMqttUrl(), carState.getMqttClientId(), dataStore );
-            mqttClient = new MqttClient( carState.getMqttUrl(), carState.getMqttClientId(), dataStore );
-            mqttClient.setCallback( this );
-
-            /*
-            DisconnectedBufferOptions options = new DisconnectedBufferOptions();
-            options.setBufferEnabled(true);
-            options.setBufferSize(50);
-            options.setDeleteOldestMessages(true);
-            options.setPersistBuffer(true);
-            mqttClient.setBufferOpts(options);
-            */
-        } catch (MqttException e) {
+            createMQTTClient();
+        } catch (Exception e) {
             Log.e( getClass().getPackage().getName(), "Create MQTT client", e );
         }
 
         botThread = new Thread(botRunnable);
         botThread.start();
+    }
+
+    private void createMQTTClient() throws MqttException, IllegalArgumentException {
+        if( mqttClient != null )
+            return;
+
+        if( carState.getMqttUrl() == null || carState.getMqttClientId() == null ){
+            throw new IllegalArgumentException();
+        }
+        mqttClient = new MqttClient( carState.getMqttUrl(), carState.getMqttClientId(), dataStore );
+        mqttClient.setCallback( this );
     }
 
     public void finish(){
@@ -248,7 +236,6 @@ public class BotManager extends Observable implements MqttCallback {
             String text = "[binary]";
 
             if( payload instanceof JSONObject ) {
-                // JSONObject payload = message.getJSONObject("payload")
                 text = ((JSONObject)payload).toString();
             }
             Log.i( getClass().getPackage().getName(), String.format("MQTT message to %s: %s", topic, text) );

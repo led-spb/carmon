@@ -13,8 +13,8 @@
     <string name="locate_schedule">Locate cron schedule</string>
     <string name="alarm_schedule">Alarm cron schedule</string>
 
-    <string name="idle_timeout">Idle timeout</string>
-    <string name="gps_timeout">GPS timeout</string>
+    <string name="idle_timeout">Idle timeout, ms</string>
+    <string name="gps_timeout">GPS timeout, ms</string>
     <string name="use_ntp">Use NTP time sync</string>
 
     <string name="btnSave">Save</string>
@@ -27,5 +27,6 @@
     <string name="alert_distance">Alert move distance</string>
     <string name="use_compress">GZIP track data</string>
     <string name="use_tracking">Send track data</string>
+    <string name="use_power_check">Don\'t sleep on charging</string>
 
 </resources>

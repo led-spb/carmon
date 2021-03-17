@@ -132,7 +132,7 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                 wakeLock = ((PowerManager) context.getSystemService(Context.POWER_SERVICE)).newWakeLock(
                         PowerManager.PARTIAL_WAKE_LOCK, "CarMonitor"
                 );
-                wakeLock.acquire();
+                wakeLock.acquire(mService.getCarState().getLocationTimeout());
                 Log.i( getClass().getPackage().getName(), "Wakelock begin");
             }
         }
@@ -159,7 +159,7 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                             synchronized (state) {
                                 try {
                                     state.setStatus("locate");
-                                    state.wait(state.getGpsTimeout());
+                                    state.wait(state.getLocationTimeout());
 
                                     if( network || state.isAlertMoving() ) {
                                         if( !network ){
@@ -170,7 +170,10 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
                                 } catch (Exception e) {
                                     Log.e(getClass().getPackage().getName(), "Wait location error", e);
                                 } finally {
-                                    endWakeAction(context, !state.isCharging() && needSleep, !state.isCharging());
+                                    endWakeAction(context,
+                                            !state.isNotSleep() || (!state.isCharging() && needSleep),
+                                            !state.isNotSleep() || !state.isCharging()
+                                    );
                                 }
                             }
                         }
@@ -178,7 +181,7 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
             ).start();
         } else {
             state.setStatus("idle");
-            endWakeAction(context, !state.isCharging() && needSleep, false);
+            endWakeAction(context, !state.isNotSleep() || (!state.isCharging() && needSleep), false);
         }
     }
 
@@ -241,8 +244,10 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
     }
 
     private void beginPowerAction(Context context){
-        unSchedulePowerOff(context);
+        if( !mService.getCarState().isNotSleep() )
+            return;
 
+        unSchedulePowerOff(context);
         beginWakeAction(context, false, 2, true);
         long timeout = mService.getCarState().getPoweroffTimeout();
 
@@ -397,10 +402,11 @@ public class ActionReceiver extends BroadcastReceiver implements LocationListene
         mService.getCarState().setGpsEnabled(
                 lm.isProviderEnabled(LocationManager.GPS_PROVIDER) && useGps
         );
-        lm.requestLocationUpdates( LocationManager.NETWORK_PROVIDER, fast?5000:60*1000, fast?0:500, this );
+        // lm.requestLocationUpdates( LocationManager.NETWORK_PROVIDER, (fast?3:15)*1000, fast?0:500, this );
+        lm.requestLocationUpdates( LocationManager.NETWORK_PROVIDER, 3000, 0, this );
         if( useGps ) {
             //lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, fast?5000:60*1000, fast?0:500, this );
-            lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, 5000, 0, this );
+            lm.requestLocationUpdates( LocationManager.GPS_PROVIDER, 3000, 0, this );
         }
         lm.addGpsStatusListener(this);
     }

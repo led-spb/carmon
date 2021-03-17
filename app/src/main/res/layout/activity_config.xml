@@ -238,13 +238,21 @@
             android:layout_alignParentRight="true"
             android:layout_below="@+id/checkUseCompress"
             android:text="@string/use_ntp" />
+        <CheckBox
+            android:id="@+id/checkBoxNotSleep"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/checkBoxTimesync"
+            android:text="@string/use_power_check" />
 
         <Button
             android:id="@+id/btnSave"
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/checkBoxTimesync"
+            android:layout_below="@+id/checkBoxNotSleep"
             android:layout_centerHorizontal="true"
             android:text="@string/btnSave" />
 

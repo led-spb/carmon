@@ -19,7 +19,7 @@ import java.util.Observable;
 
 
 public class CarState extends Observable {
-    public static final DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    static final DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
     private Location location, lastLocation;
     private JSONArray track;
 
@@ -46,7 +46,7 @@ public class CarState extends Observable {
 
     private CronExpression locateSchedule, wakeSchedule, alarmSchedule;
 
-    public CarState( SharedPreferences preferences ) {
+    CarState( SharedPreferences preferences ) {
         this.preferences = preferences;
         startNewTrack();
 
@@ -62,7 +62,7 @@ public class CarState extends Observable {
     }
 
 
-    public SharedPreferences getPreferences(){
+    SharedPreferences getPreferences(){
         return preferences;
     }
 
@@ -75,131 +75,134 @@ public class CarState extends Observable {
         return null;
     }
 
-    public int getVersionCode() {
+    int getVersionCode() {
         return versionCode;
     }
 
-    public void setVersionCode(int versionCode) {
+    void setVersionCode(int versionCode) {
         this.versionCode = versionCode;
     }
 
-    public void setLocateSchedule(String inputString){
+    void setLocateSchedule(String inputString){
+        locateSchedule = null;
         try {
             locateSchedule = new CronExpression(inputString);
-            preferences.edit()
-                    .putString("locate_schedule", inputString)
-                    .apply();
         } catch (ParseException e) {
-            Log.e( getClass().getPackage().getName(), "Error save cron expression", e );
+            Log.e(getClass().getPackage().getName(), "Error save cron expression", e);
         }
+        preferences.edit()
+                .putString("locate_schedule", inputString)
+                .apply();
     }
-    public String getLocateSchedule(){
+    String getLocateSchedule(){
         return locateSchedule==null?"":locateSchedule.getCronExpression();
     }
 
-    public Calendar getNextLocateTime(){
+    Calendar getNextLocateTime(){
         return getNextTime(locateSchedule);
     }
-    public Calendar getNextWakeTime(){
+    Calendar getNextWakeTime(){
         return getNextTime(wakeSchedule);
     }
-    public Calendar getNextAlarmTime(){
+    Calendar getNextAlarmTime(){
         return getNextTime(alarmSchedule);
     }
 
-    public String getWakeSchedule() {
+    String getWakeSchedule() {
         return wakeSchedule==null?"":wakeSchedule.getCronExpression();
     }
-    public void setWakeSchedule(String inputString) {
+    void setWakeSchedule(String inputString) {
+        wakeSchedule = null;
         try {
             wakeSchedule = new CronExpression(inputString);
-            preferences.edit()
-                    .putString("wake_schedule", inputString)
-                    .apply();
         } catch (ParseException e) {
             Log.e( getClass().getPackage().getName(), "Error save cron expression", e );
         }
+        preferences.edit()
+                .putString("wake_schedule", inputString)
+                .apply();
     }
 
-    public String getAlarmSchedule() {
-        return alarmSchedule ==null?"": alarmSchedule.getCronExpression();
+    String getAlarmSchedule() {
+        return alarmSchedule == null?"": alarmSchedule.getCronExpression();
     }
 
-    public void setAlarmSchedule(String inputString) {
+    void setAlarmSchedule(String inputString) {
+        alarmSchedule = null;
         try {
             alarmSchedule = new CronExpression(inputString);
-            preferences.edit()
-                    .putString("detect_schedule", inputString)
-                    .apply();
         } catch (ParseException e) {
             Log.e( getClass().getPackage().getName(), "Error save cron expression", e );
         }
+        preferences.edit()
+                .putString("detect_schedule", inputString)
+                .apply();
     }
 
-    public int getSatellites() {
+    int getSatellites() {
         return satellites;
     }
 
-    public void setSatellites(int satellites) {
+    void setSatellites(int satellites) {
         this.satellites = satellites;
     }
 
-    public int getSatellitesUsed() {
+    int getSatellitesUsed() {
         return satellitesUsed;
     }
 
-    public void setSatellitesUsed(int satellitesUsed) {
+    void setSatellitesUsed(int satellitesUsed) {
         this.satellitesUsed = satellitesUsed;
     }
 
-    public int getTimeToFirstFix() {
+    int getTimeToFirstFix() {
         return timeToFirstFix;
     }
 
-    public void setTimeToFirstFix(int timeToFirstFix) {
+    void setTimeToFirstFix(int timeToFirstFix) {
         this.timeToFirstFix = timeToFirstFix;
     }
 
-    public int getBatteryTemperature() {
+    int getBatteryTemperature() {
         return batteryTemperature;
     }
 
-    public void setBatteryTemperature(int batteryTemperature) {
+    void setBatteryTemperature(int batteryTemperature) {
         this.batteryTemperature = batteryTemperature;
     }
 
-    public int getBatteryVoltage() {
+    int getBatteryVoltage() {
         return batteryVoltage;
     }
 
-    public void setBatteryVoltage(int batteryVoltage) {
+    void setBatteryVoltage(int batteryVoltage) {
         this.batteryVoltage = batteryVoltage;
     }
 
-    public void setGpsEnabled(boolean gpsEnabled) {
+    void setGpsEnabled(boolean gpsEnabled) {
         this.gpsEnabled = gpsEnabled;
     }
 
-    private Long gpsTimeout = null;
-    public long getGpsTimeout() {
-        if(gpsTimeout==null)
-            gpsTimeout = preferences.getLong("gps_timeout", 5*60*1000);
-        return gpsTimeout;
+    private Long locationTimeout = null;
+    long getLocationTimeout() {
+        if(locationTimeout ==null)
+            locationTimeout = preferences.getLong("location_timeout", 5*60*1000);
+        return locationTimeout;
     }
-    public void setGpsTimeout(long gpsTimeout) {
-        this.gpsTimeout = gpsTimeout;
+    void setLocationTimeout(long locationTimeout) {
+        this.locationTimeout = locationTimeout;
         preferences.edit()
-                .putLong("gps_timeout", gpsTimeout )
+                .putLong("location_timeout", locationTimeout)
                 .apply();
     }
 
     private Long idleTimeout;
-    public long getIdleTimeout() {
+    long getIdleTimeout() {
         if(idleTimeout==null)
             idleTimeout = preferences.getLong("idle_timeout", 5*60*1000);
         return idleTimeout;
     }
-    public void setIdleTimeout(long idleTimeout) {
+    void setIdleTimeout(long idleTimeout) {
         this.idleTimeout = idleTimeout;
         preferences.edit()
                 .putLong("idle_timeout", idleTimeout )
@@ -207,8 +210,7 @@ public class CarState extends Observable {
     }
 
     private Long poweroffTimeout = null;
-
-    public long getPoweroffTimeout() {
+    long getPoweroffTimeout() {
         if( poweroffTimeout==null ){
             poweroffTimeout = preferences.getLong("poweroff_timeout", 2*60*1000);
         }
@@ -220,18 +222,18 @@ public class CarState extends Observable {
         preferences.edit().putLong("poweroff_timeout", poweroffTimeout).apply();
     }
 
-    public JSONObject toJSON() throws JSONException{
+    JSONObject toJSON() throws JSONException{
         return toJSON(false);
     }
 
-    public JSONObject toJSON(boolean less) throws JSONException {
+    JSONObject toJSON(boolean less) throws JSONException {
         JSONObject message = new JSONObject();
 
         if(!less) {
             message.put("_type", "location");
             message.put("_ver", getVersionCode() );
             message.put("batt", getBatteryLevel());
-            message.put("charge", getBatteryPlugged());
+            message.put("bs", isCharging()? 2: 1);
             message.put("temp", getBatteryTemperature() / 10.0);
             message.put("volt", getBatteryVoltage());
         }
@@ -252,7 +254,7 @@ public class CarState extends Observable {
 
                 if(!less) {
                     message
-                            .put("cog", loc.getBearing())
+                            //.put("cog", loc.getBearing()) // Not used in current android version
                             .put("ttf", getTimeToFirstFix())
                             .put("sat", String.format("%d/%d", getSatellitesUsed(), getSatellites()));
                 }
@@ -344,11 +346,11 @@ public class CarState extends Observable {
         }
     }
 
-    public float getMoveDistance() {
+    float getMoveDistance() {
         return moveDistance;
     }
 
-    public void setMoveDistance(float moveDistance) {
+    void setMoveDistance(float moveDistance) {
         this.moveDistance = moveDistance;
     }
 
@@ -364,29 +366,28 @@ public class CarState extends Observable {
         this.batteryNotified = batteryNotified;
     }
 
-    public int getBatteryPlugged() {
+    int getBatteryPlugged() {
         return batteryPlugged;
     }
-
-    public void setBatteryPlugged(int batteryPlugged) {
+    void setBatteryPlugged(int batteryPlugged) {
         this.batteryPlugged = batteryPlugged;
     }
 
     private Float trackDistance = null;
-    public float getTrackDistance() {
+    float getTrackDistance() {
         if( trackDistance==null){
             trackDistance = preferences.getFloat("track_distance", (float) 200.0);
         }
         return trackDistance;
     }
-    public void setTrackDistance(float trackDistance) {
+    void setTrackDistance(float trackDistance) {
         this.trackDistance = trackDistance;
         preferences.edit().putFloat("track_distance", trackDistance).apply();
     }
 
     private Float alarmDistance = null;
     public float getAlarmDistance() {
-        if( alarmDistance ==null ){
+        if( alarmDistance == null ){
             alarmDistance = preferences.getFloat("alert_distance", (float) 500.0);
         }
         return alarmDistance;
@@ -400,21 +401,32 @@ public class CarState extends Observable {
         return isFineLocation() && getMoveDistance()>= getAlarmDistance();
     }
 
+    private Boolean notSleep = null;
+    boolean isNotSleep(){
+        if( notSleep == null ){
+            notSleep = preferences.getBoolean("notsleep", true);
+        }
+        return notSleep;
+    }
+    void setNotSleep(boolean notSleep){
+        this.notSleep = notSleep;
+        preferences.edit().putBoolean("notsleep", notSleep).apply();
+    }
 
     private Boolean tracking = null;
-    public boolean isTracking() {
+    boolean isTracking() {
         if( tracking == null ){
             tracking = preferences.getBoolean("tracking", true);
         }
         return tracking;
     }
-    public void setTracking(boolean tracking) {
+    void setTracking(boolean tracking) {
         this.tracking = tracking;
         preferences.edit().putBoolean("tracking", tracking).apply();
     }
 
     private Boolean useCompress;
-    public boolean isUseCompress() {
+    boolean isUseCompress() {
         if( useCompress==null ){
             useCompress = preferences.getBoolean("compress", true);
         }

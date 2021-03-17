@@ -4,8 +4,6 @@ import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
